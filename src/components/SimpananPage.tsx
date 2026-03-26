@@ -74,7 +74,7 @@ export default function SimpananPage() {
 
         <div className="lg:col-span-2 bg-navy-900/80 rounded-2xl border border-navy-700/30 p-5">
           <h3 className="text-base font-semibold text-white mb-4">Ringkasan per Kategori</h3>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               {
                 label: "Simpanan Pokok",
@@ -92,9 +92,9 @@ export default function SimpananPage() {
                 color: "warning",
               },
             ].map((item, i) => (
-              <div key={i} className="bg-navy-800/50 rounded-xl p-4 text-center">
-                <p className="text-xs text-navy-400 mb-2">{item.label}</p>
-                <p className="text-lg font-bold text-white">{formatRupiah(item.total)}</p>
+              <div key={i} className="bg-navy-800/50 rounded-xl p-4 sm:text-center flex sm:block items-center justify-between">
+                <p className="text-xs text-navy-400 sm:mb-2">{item.label}</p>
+                <p className="text-base sm:text-lg font-bold text-white">{formatRupiah(item.total)}</p>
                 <p className="text-xs text-navy-400 mt-1">{anggotaList.length} anggota</p>
               </div>
             ))}

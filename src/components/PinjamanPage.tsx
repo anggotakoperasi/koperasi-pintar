@@ -90,7 +90,7 @@ export default function PinjamanPage() {
 
         <div className="lg:col-span-3 bg-navy-900/80 rounded-2xl border border-navy-700/30 p-5">
           <h3 className="text-base font-semibold text-white mb-4">Status Pinjaman</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { label: "Lancar", count: pinjamanList.filter((p) => p.status === "lancar").length, total: pinjamanList.filter((p) => p.status === "lancar").reduce((s, p) => s + p.sisaPinjaman, 0), color: "success", pct: Math.round((pinjamanList.filter((p) => p.status === "lancar").length / pinjamanList.length) * 100) },
               { label: "Kurang Lancar", count: pinjamanList.filter((p) => p.status === "kurang_lancar").length, total: pinjamanList.filter((p) => p.status === "kurang_lancar").reduce((s, p) => s + p.sisaPinjaman, 0), color: "warning", pct: Math.round((pinjamanList.filter((p) => p.status === "kurang_lancar").length / pinjamanList.length) * 100) },
@@ -101,7 +101,7 @@ export default function PinjamanPage() {
                   <span className={`text-sm font-medium text-${item.color}-400`}>{item.label}</span>
                   <span className={`text-xs font-bold text-${item.color}-400`}>{item.pct}%</span>
                 </div>
-                <p className="text-xl font-bold text-white">{item.count} <span className="text-sm font-normal text-navy-400">pinjaman</span></p>
+                <p className="text-lg sm:text-xl font-bold text-white">{item.count} <span className="text-sm font-normal text-navy-400">pinjaman</span></p>
                 <p className="text-xs text-navy-400 mt-1">Total: {formatRupiah(item.total)}</p>
                 <div className="h-1.5 bg-navy-800 rounded-full mt-2 overflow-hidden">
                   <div className={`h-full bg-${item.color}-500 rounded-full`} style={{ width: `${item.pct}%` }} />

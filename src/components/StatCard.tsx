@@ -23,9 +23,9 @@ export default function StatCard({ title, value, subtitle, icon: Icon, trend, co
   const c = colorMap[color];
 
   return (
-    <div className={`bg-navy-900/80 rounded-2xl p-5 border ${c.border} hover:border-opacity-50 transition-all`}>
+    <div className={`bg-navy-900/80 rounded-2xl p-4 lg:p-5 border ${c.border} hover:border-opacity-50 transition-all`}>
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-11 h-11 rounded-xl ${c.bg} flex items-center justify-center`}>
+        <div className={`w-10 h-10 lg:w-11 lg:h-11 rounded-xl ${c.bg} flex items-center justify-center`}>
           <Icon className={`w-5 h-5 ${c.icon}`} />
         </div>
         {trend !== undefined && (
@@ -37,8 +37,8 @@ export default function StatCard({ title, value, subtitle, icon: Icon, trend, co
           </div>
         )}
       </div>
-      <p className="text-sm text-navy-300 mb-1">{title}</p>
-      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className="text-xs lg:text-sm text-navy-300 mb-1">{title}</p>
+      <p className="text-xl lg:text-2xl font-bold text-white break-all">{value}</p>
       {subtitle && <p className="text-xs text-navy-400 mt-1">{subtitle}</p>}
     </div>
   );
