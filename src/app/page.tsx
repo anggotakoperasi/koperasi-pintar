@@ -74,6 +74,7 @@ export default function Home() {
           subtitle={config.subtitle}
           user={user}
           onMobileMenuOpen={() => setMobileMenuOpen(true)}
+          onLogout={handleLogout}
         />
         <div className="p-4 lg:p-6">{renderPage()}</div>
       </main>
