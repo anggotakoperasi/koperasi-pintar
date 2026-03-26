@@ -29,6 +29,7 @@ export default function Home() {
   const [user, setUser] = useState<UserSession | null>(null);
   const [activeMenu, setActiveMenu] = useState("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (!user) {
     return <LoginPage onLogin={(session) => setUser(session)} />;
@@ -63,10 +64,18 @@ export default function Home() {
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         onLogout={handleLogout}
+        mobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
       />
-      <main className={`transition-all duration-300 ${sidebarCollapsed ? "ml-[72px]" : "ml-[260px]"}`}>
-        <Header title={config.title} subtitle={config.subtitle} user={user} />
-        <div className="p-6">{renderPage()}</div>
+      {/* ml-0 on mobile, margin on desktop */}
+      <main className={`transition-all duration-300 ml-0 ${sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-[260px]"}`}>
+        <Header
+          title={config.title}
+          subtitle={config.subtitle}
+          user={user}
+          onMobileMenuOpen={() => setMobileMenuOpen(true)}
+        />
+        <div className="p-4 lg:p-6">{renderPage()}</div>
       </main>
     </div>
   );

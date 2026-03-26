@@ -1,15 +1,16 @@
 "use client";
 
-import { Bell, Search, User, Calendar } from "lucide-react";
+import { Bell, Search, User, Calendar, Menu } from "lucide-react";
 import type { UserSession } from "./LoginPage";
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
   user: UserSession;
+  onMobileMenuOpen: () => void;
 }
 
-export default function Header({ title, subtitle, user }: HeaderProps) {
+export default function Header({ title, subtitle, user, onMobileMenuOpen }: HeaderProps) {
   const now = new Date();
   const dateStr = now.toLocaleDateString("id-ID", {
     weekday: "long",
@@ -19,14 +20,23 @@ export default function Header({ title, subtitle, user }: HeaderProps) {
   });
 
   return (
-    <header className="h-[72px] border-b border-navy-700/50 bg-navy-950/80 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-30">
-      <div>
-        <h2 className="text-xl font-bold text-white">{title}</h2>
-        {subtitle && <p className="text-sm text-navy-300">{subtitle}</p>}
+    <header className="h-[64px] lg:h-[72px] border-b border-navy-700/50 bg-navy-950/80 backdrop-blur-sm flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
+      <div className="flex items-center gap-3">
+        {/* Hamburger - mobile only */}
+        <button
+          onClick={onMobileMenuOpen}
+          className="p-2 -ml-1 rounded-xl text-navy-300 hover:bg-navy-800 hover:text-white lg:hidden cursor-pointer"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        <div>
+          <h2 className="text-lg lg:text-xl font-bold text-white">{title}</h2>
+          {subtitle && <p className="text-xs lg:text-sm text-navy-300 hidden sm:block">{subtitle}</p>}
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="hidden md:flex items-center gap-2 text-sm text-navy-300">
+      <div className="flex items-center gap-2 lg:gap-4">
+        <div className="hidden xl:flex items-center gap-2 text-sm text-navy-300">
           <Calendar className="w-4 h-4" />
           <span>{dateStr}</span>
         </div>
@@ -45,9 +55,9 @@ export default function Header({ title, subtitle, user }: HeaderProps) {
           <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-danger-500 rounded-full border-2 border-navy-950" />
         </button>
 
-        <div className="flex items-center gap-3 pl-4 border-l border-navy-700/50">
-          <div className="w-9 h-9 rounded-xl bg-accent-500/20 flex items-center justify-center">
-            <User className="w-5 h-5 text-accent-400" />
+        <div className="flex items-center gap-2 lg:gap-3 pl-2 lg:pl-4 border-l border-navy-700/50">
+          <div className="w-8 h-8 lg:w-9 lg:h-9 rounded-xl bg-accent-500/20 flex items-center justify-center">
+            <User className="w-4 h-4 lg:w-5 lg:h-5 text-accent-400" />
           </div>
           <div className="hidden md:block">
             <p className="text-sm font-medium text-white">{user.nama}</p>
