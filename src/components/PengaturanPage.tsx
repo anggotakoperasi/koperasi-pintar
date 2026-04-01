@@ -163,8 +163,17 @@ export default function PengaturanPage() {
             {activeModal === "setup" && (
               <>
                 <div>
-                  <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Nama Koperasi</label>
-                  <input value={namaKoperasi} onChange={(e) => setNamaKoperasi(e.target.value)} className={inputCls} />
+                  <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">
+                    Nama Koperasi
+                    <span className="ml-2 text-[10px] text-warning-400 normal-case tracking-normal">(Terkunci — tidak dapat diubah)</span>
+                  </label>
+                  <input
+                    value={namaKoperasi}
+                    readOnly
+                    disabled
+                    className={`${inputCls} opacity-60 cursor-not-allowed`}
+                    title="Nama koperasi tidak dapat diubah karena terkait hak cipta aplikasi"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Alamat</label>
