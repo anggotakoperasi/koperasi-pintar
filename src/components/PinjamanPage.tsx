@@ -21,12 +21,20 @@ import type { Pinjaman, Anggota } from "@/data/mock";
 import { fetchPinjaman, fetchAnggota, insertPinjaman, bayarAngsuran } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
 
-const JENIS_PINJAMAN = [
-  "Simpan Pinjam",
-  "Kredit Serba Guna",
-  "Bank Mandiri",
-  "Lainnya",
-] as const;
+const JENIS_PINJAMAN_DEFAULT = ["Simpan Pinjam", "Kredit Serba Guna", "Bank Mandiri", "Lainnya"];
+
+function loadJenisPinjaman(): string[] {
+  if (typeof window === "undefined") return JENIS_PINJAMAN_DEFAULT;
+  try {
+    const raw = localStorage.getItem("koperasi_pengaturan");
+    if (!raw) return JENIS_PINJAMAN_DEFAULT;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed.kodePinjaman) && parsed.kodePinjaman.length > 0) {
+      return parsed.kodePinjaman.map((k: { nama: string }) => k.nama);
+    }
+  } catch { /* ignore */ }
+  return JENIS_PINJAMAN_DEFAULT;
+}
 
 function addMonthsIso(startYmd: string, months: number): string {
   const [y, m, d] = startYmd.split("-").map(Number);
@@ -83,7 +91,8 @@ export default function PinjamanPage() {
   const [submittingBayar, setSubmittingBayar] = useState(false);
 
   const [baruAnggotaId, setBaruAnggotaId] = useState("");
-  const [baruJenis, setBaruJenis] = useState<string>(JENIS_PINJAMAN[0]);
+  const jenisPinjamanList = useMemo(() => loadJenisPinjaman(), [modalBaruOpen]);
+  const [baruJenis, setBaruJenis] = useState<string>("");
   const [baruJumlah, setBaruJumlah] = useState("");
   const [baruTenor, setBaruTenor] = useState("");
   const [baruBunga, setBaruBunga] = useState("1");
@@ -107,12 +116,13 @@ export default function PinjamanPage() {
 
   useEffect(() => {
     if (!modalBaruOpen) return;
+    setBaruJenis(jenisPinjamanList[0] || "");
     setLoadingAnggota(true);
     fetchAnggota()
       .then(setAnggotaList)
       .catch(console.error)
       .finally(() => setLoadingAnggota(false));
-  }, [modalBaruOpen]);
+  }, [modalBaruOpen, jenisPinjamanList]);
 
   const closeModalBaru = useCallback(() => { if (!submittingBaru) setModalBaruOpen(false); }, [submittingBaru]);
   const closeModalBayar = useCallback(() => { if (!submittingBayar) setModalBayarOpen(false); }, [submittingBayar]);
@@ -148,7 +158,7 @@ export default function PinjamanPage() {
 
   const resetFormBaru = () => {
     setBaruAnggotaId("");
-    setBaruJenis(JENIS_PINJAMAN[0]);
+    setBaruJenis(jenisPinjamanList[0] || "");
     setBaruJumlah("");
     setBaruTenor("");
     setBaruBunga("1");
@@ -323,7 +333,7 @@ export default function PinjamanPage() {
                       onChange={(e) => setBaruJenis(e.target.value)}
                       className="w-full bg-navy-900 border border-navy-600/60 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:ring-2 focus:ring-accent-500/40"
                     >
-                      {JENIS_PINJAMAN.map((j) => (
+                      {jenisPinjamanList.map((j) => (
                         <option key={j} value={j}>
                           {j}
                         </option>
