@@ -15,6 +15,9 @@ import {
   X,
   CheckCircle2,
   Loader2,
+  Edit3,
+  AlertTriangle,
+  Shield,
 } from "lucide-react";
 
 const SETTINGS_KEY = "koperasi_pengaturan";
@@ -36,12 +39,22 @@ interface KodePinjaman { kode: string; nama: string; bunga: string; }
 interface KodeSimpanan { kode: string; nama: string; keterangan: string; }
 interface Operator { id: number; nama: string; username: string; role: string; aktif: boolean; }
 
+const ROLE_OPTIONS = ["Super Admin", "Admin Operasional", "Bendahara", "Manajer Unit", "Viewer"];
+
+const DEFAULT_OPERATORS: Operator[] = [
+  { id: 1, nama: "IPTU (PURN) POL HARDOYO", username: "admin", role: "Super Admin", aktif: true },
+  { id: 2, nama: "BRIPKA DEWI ASTUTI", username: "operator", role: "Admin Operasional", aktif: true },
+  { id: 3, nama: "IPTU SLAMET RIYADI", username: "bendahara", role: "Bendahara", aktif: true },
+  { id: 4, nama: "AIPDA RINA MARLINA", username: "manajer", role: "Manajer Unit", aktif: true },
+];
+
 const DEFAULTS = {
   namaKoperasi: "Primkoppol Resor Subang",
   alamat: "Jl. Otista No.52, Subang",
   ketua: "IPTU (PURN) POL HARDOYO",
   badanHukum: "No. 6513/BHPAD/KWK.10/II/2003 tertanggal 20 Februari 2003",
   periode: "2025 - 2028",
+  operators: DEFAULT_OPERATORS,
   kodePinjaman: [
     { kode: "SP", nama: "Simpan Pinjam", bunga: "1.0" },
     { kode: "KSG", nama: "Kredit Serba Guna", bunga: "1.5" },
@@ -79,20 +92,17 @@ export default function PengaturanPage() {
   const [badanHukum, setBadanHukum] = useState(stored.badanHukum);
   const [periode, setPeriode] = useState(stored.periode);
 
-  const [operators] = useState<Operator[]>([
-    { id: 1, nama: "IPTU (PURN) POL HARDOYO", username: "admin", role: "Super Admin", aktif: true },
-    { id: 2, nama: "BRIPKA DEWI ASTUTI", username: "operator", role: "Admin Operasional", aktif: true },
-    { id: 3, nama: "IPTU SLAMET RIYADI", username: "bendahara", role: "Bendahara", aktif: true },
-    { id: 4, nama: "AIPDA RINA MARLINA", username: "manajer", role: "Manajer Unit", aktif: true },
-  ]);
+  const [operators, setOperators] = useState<Operator[]>(stored.operators || DEFAULT_OPERATORS);
+  const [editingOp, setEditingOp] = useState<Operator | null>(null);
+  const [superAdminWarning, setSuperAdminWarning] = useState(false);
 
   const [kodePinjaman, setKodePinjaman] = useState<KodePinjaman[]>(stored.kodePinjaman);
   const [kodeSimpanan, setKodeSimpanan] = useState<KodeSimpanan[]>(stored.kodeSimpanan);
 
   const persistSettings = useCallback(() => {
-    const data = { namaKoperasi, alamat, ketua, badanHukum, periode, kodePinjaman, kodeSimpanan };
+    const data = { namaKoperasi, alamat, ketua, badanHukum, periode, operators, kodePinjaman, kodeSimpanan };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
-  }, [namaKoperasi, alamat, ketua, badanHukum, periode, kodePinjaman, kodeSimpanan]);
+  }, [namaKoperasi, alamat, ketua, badanHukum, periode, operators, kodePinjaman, kodeSimpanan]);
 
   const saveWithPersist = (msg: string) => {
     setSaving(true);
@@ -179,33 +189,114 @@ export default function PengaturanPage() {
             )}
             {activeModal === "operator" && (
               <>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-navy-800/80">
-                      <tr className="border-b border-navy-600/40">
-                        <th className="text-left text-xs font-medium text-navy-400 uppercase px-3 py-2">Nama</th>
-                        <th className="text-left text-xs font-medium text-navy-400 uppercase px-3 py-2">Username</th>
-                        <th className="text-left text-xs font-medium text-navy-400 uppercase px-3 py-2">Role</th>
-                        <th className="text-center text-xs font-medium text-navy-400 uppercase px-3 py-2">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {operators.map((op) => (
-                        <tr key={op.id} className="border-b border-navy-800/50">
-                          <td className="px-3 py-2.5 text-sm text-white">{op.nama}</td>
-                          <td className="px-3 py-2.5 text-sm text-navy-300">{op.username}</td>
-                          <td className="px-3 py-2.5 text-sm text-navy-300">{op.role}</td>
-                          <td className="px-3 py-2.5 text-center">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${op.aktif ? "bg-success-600/20 text-success-400" : "bg-danger-600/20 text-danger-400"}`}>
-                              {op.aktif ? "Aktif" : "Nonaktif"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <p className="text-xs text-navy-500">Manajemen operator terintegrasi dengan sistem autentikasi.</p>
+                {editingOp ? (
+                  <div className="space-y-4">
+                    {editingOp.role === "Super Admin" && (
+                      <div className="flex items-start gap-2 bg-warning-600/10 border border-warning-600/30 rounded-xl px-4 py-3">
+                        <AlertTriangle className="w-4 h-4 text-warning-400 shrink-0 mt-0.5" />
+                        <div className="text-xs text-warning-400">
+                          <p className="font-semibold">Perhatian: Akun Super Admin</p>
+                          <p className="mt-0.5 text-warning-400/80">Mengubah data Super Admin dapat mengakibatkan kehilangan akses ke sistem. Pastikan Anda mengetahui apa yang dilakukan.</p>
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Nama</label>
+                      <input value={editingOp.nama} onChange={(e) => setEditingOp({ ...editingOp, nama: e.target.value })} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Username</label>
+                      <input value={editingOp.username} onChange={(e) => setEditingOp({ ...editingOp, username: e.target.value })} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Role</label>
+                      <select
+                        value={editingOp.role}
+                        onChange={(e) => setEditingOp({ ...editingOp, role: e.target.value })}
+                        className={`${inputCls} cursor-pointer`}
+                      >
+                        {ROLE_OPTIONS.map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setEditingOp(null)}
+                        className="flex-1 rounded-xl border border-navy-600 bg-navy-800 py-2.5 text-sm font-medium text-navy-200 hover:bg-navy-700 transition-colors cursor-pointer"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!editingOp.nama.trim() || !editingOp.username.trim()}
+                        onClick={() => {
+                          if (editingOp.id === 1 && !superAdminWarning) {
+                            setSuperAdminWarning(true);
+                            return;
+                          }
+                          setOperators((prev) => prev.map((o) => o.id === editingOp.id ? editingOp : o));
+                          setSuperAdminWarning(false);
+                          setEditingOp(null);
+                          saveWithPersist("Data operator berhasil diperbarui!");
+                        }}
+                        className={btnPrimary + " flex-1 cursor-pointer"}
+                      >
+                        <Save className="w-4 h-4" /> Simpan
+                      </button>
+                    </div>
+                    {superAdminWarning && (
+                      <div className="flex items-start gap-2 bg-danger-600/10 border border-danger-600/30 rounded-xl px-4 py-3 animate-pulse">
+                        <Shield className="w-4 h-4 text-danger-400 shrink-0 mt-0.5" />
+                        <div className="text-xs text-danger-400">
+                          <p className="font-semibold">Konfirmasi Perubahan Super Admin</p>
+                          <p className="mt-0.5 text-danger-400/80">Anda akan mengubah data akun Super Admin. Klik &quot;Simpan&quot; sekali lagi untuk mengonfirmasi.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-navy-800/80">
+                          <tr className="border-b border-navy-600/40">
+                            <th className="text-left text-xs font-medium text-navy-400 uppercase px-3 py-2">Nama</th>
+                            <th className="text-left text-xs font-medium text-navy-400 uppercase px-3 py-2">Username</th>
+                            <th className="text-left text-xs font-medium text-navy-400 uppercase px-3 py-2">Role</th>
+                            <th className="text-center text-xs font-medium text-navy-400 uppercase px-3 py-2">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {operators.map((op) => (
+                            <tr key={op.id} className="border-b border-navy-800/50">
+                              <td className="px-3 py-2.5 text-sm text-white">
+                                <div className="flex items-center gap-2">
+                                  {op.role === "Super Admin" && <Shield className="w-3.5 h-3.5 text-warning-400 shrink-0" />}
+                                  {op.nama}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2.5 text-sm text-navy-300">{op.username}</td>
+                              <td className="px-3 py-2.5 text-sm text-navy-300">{op.role}</td>
+                              <td className="px-3 py-2.5 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => { setEditingOp({ ...op }); setSuperAdminWarning(false); }}
+                                  className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-accent-500/15 text-accent-400 hover:bg-accent-500/25 transition-colors cursor-pointer"
+                                  title={`Edit ${op.nama}`}
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-navy-500">Klik ikon edit untuk mengubah data operator. Hati-hati saat mengubah akun Super Admin.</p>
+                  </>
+                )}
               </>
             )}
             {activeModal === "kode_pinjaman" && (
