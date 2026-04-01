@@ -69,39 +69,58 @@ function mapPotongan(row: any): Potongan {
 // ===== READ =====
 
 export async function fetchAnggota(): Promise<Anggota[]> {
-  const { data, error } = await supabase
-    .from("anggota")
-    .select("*")
-    .order("nomor_anggota");
-  if (error) throw error;
-  return (data || []).map(mapAnggota);
+  const all: any[] = [];
+  const PAGE = 1000;
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from("anggota")
+      .select("*")
+      .order("nomor_anggota")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all.map(mapAnggota);
 }
 
-export async function fetchTransaksiSimpanan(): Promise<TransaksiSimpanan[]> {
-  const { data, error } = await supabase
-    .from("transaksi_simpanan")
-    .select("*")
-    .order("tanggal", { ascending: false });
-  if (error) throw error;
-  return (data || []).map(mapTransaksi);
+async function fetchAll<T>(
+  table: string,
+  orderCol: string,
+  ascending: boolean,
+  mapper: (row: any) => T,
+): Promise<T[]> {
+  const all: any[] = [];
+  const PAGE = 1000;
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .order(orderCol, { ascending })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all.map(mapper);
 }
 
-export async function fetchPinjaman(): Promise<Pinjaman[]> {
-  const { data, error } = await supabase
-    .from("pinjaman")
-    .select("*")
-    .order("tanggal_pinjam", { ascending: false });
-  if (error) throw error;
-  return (data || []).map(mapPinjaman);
+export function fetchTransaksiSimpanan(): Promise<TransaksiSimpanan[]> {
+  return fetchAll("transaksi_simpanan", "tanggal", false, mapTransaksi);
 }
 
-export async function fetchPotongan(): Promise<Potongan[]> {
-  const { data, error } = await supabase
-    .from("potongan")
-    .select("*")
-    .order("bulan", { ascending: false });
-  if (error) throw error;
-  return (data || []).map(mapPotongan);
+export function fetchPinjaman(): Promise<Pinjaman[]> {
+  return fetchAll("pinjaman", "tanggal_pinjam", false, mapPinjaman);
+}
+
+export function fetchPotongan(): Promise<Potongan[]> {
+  return fetchAll("potongan", "bulan", false, mapPotongan);
 }
 
 export async function searchAnggota(query: string): Promise<Anggota[]> {
@@ -115,6 +134,18 @@ export async function searchAnggota(query: string): Promise<Anggota[]> {
 }
 
 // ===== WRITE: ANGGOTA =====
+
+export async function getMaxNomorAnggota(): Promise<number> {
+  const { data, error } = await supabase
+    .from("anggota")
+    .select("nomor_anggota")
+    .order("nomor_anggota", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  if (!data || data.length === 0) return 0;
+  const num = parseInt(String(data[0].nomor_anggota).replace(/\D/g, "") || "0", 10);
+  return Number.isNaN(num) ? 0 : num;
+}
 
 export async function insertAnggota(anggota: Omit<Anggota, "id">) {
   const id = `NEW${Date.now()}`;

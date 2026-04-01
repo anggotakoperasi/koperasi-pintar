@@ -23,7 +23,7 @@ import {
 import StatCard from "./StatCard";
 import { formatRupiah, getTierColor, getTierLabel } from "@/data/mock";
 import type { Anggota } from "@/data/mock";
-import { fetchAnggota, insertAnggota, updateAnggota, deleteAnggota } from "@/lib/fetchers";
+import { fetchAnggota, insertAnggota, updateAnggota, deleteAnggota, getMaxNomorAnggota } from "@/lib/fetchers";
 
 const PANGKAT_OPTIONS: string[] = [
   "AKBP",
@@ -197,7 +197,8 @@ export default function AnggotaPage() {
     }
     setFormBusy(true);
     try {
-      const nomorAnggota = nextNomorAnggota(anggotaList);
+      const maxNum = await getMaxNomorAnggota();
+      const nomorAnggota = String(maxNum + 1).padStart(3, "0");
       await insertAnggota({
         nomorAnggota,
         nama: addForm.nama.trim(),
