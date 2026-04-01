@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Wallet,
   ArrowUpCircle,
@@ -11,6 +11,8 @@ import {
   Loader2,
   X,
   Eye,
+  Calendar,
+  Filter,
 } from "lucide-react";
 import StatCard from "./StatCard";
 import { formatRupiah } from "@/data/mock";
@@ -54,6 +56,9 @@ export default function SimpananPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<TransaksiSimpanan | null>(null);
+  const [detailDateFrom, setDetailDateFrom] = useState("");
+  const [detailDateTo, setDetailDateTo] = useState("");
+  const [detailKategori, setDetailKategori] = useState<string>("semua");
 
   useEffect(() => {
     Promise.all([fetchAnggota(), fetchTransaksiSimpanan()])
@@ -77,10 +82,19 @@ export default function SimpananPage() {
     setModalJenis(jenis);
   };
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setModalJenis(null);
     setSubmitError(null);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!modalJenis) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { e.preventDefault(); closeModal(); }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [modalJenis, closeModal]);
 
   const selectedAnggota = useMemo(
     () => anggotaList.find((a) => a.id === form.anggotaId) ?? null,
@@ -133,6 +147,24 @@ export default function SimpananPage() {
       setSubmitting(false);
     }
   };
+
+  const openDetail = useCallback((t: TransaksiSimpanan) => {
+    setDetailItem(t);
+    setDetailDateFrom("");
+    setDetailDateTo("");
+    setDetailKategori("semua");
+  }, []);
+
+  const detailTransactions = useMemo(() => {
+    if (!detailItem) return [];
+    return transaksiList.filter((t) => {
+      if (t.namaAnggota !== detailItem.namaAnggota) return false;
+      if (detailKategori !== "semua" && t.kategori !== detailKategori) return false;
+      if (detailDateFrom && t.tanggal < detailDateFrom) return false;
+      if (detailDateTo && t.tanggal > detailDateTo) return false;
+      return true;
+    });
+  }, [detailItem, transaksiList, detailKategori, detailDateFrom, detailDateTo]);
 
   if (loading) {
     return (
@@ -342,35 +374,116 @@ export default function SimpananPage() {
       <DetailPopup
         open={!!detailItem}
         onClose={() => setDetailItem(null)}
-        title="Rincian Transaksi Simpanan"
+        title={`Rincian Simpanan — ${detailItem?.namaAnggota || ""}`}
         filename={`simpanan-${detailItem?.namaAnggota?.replace(/\s+/g, "_") || "detail"}`}
       >
         {detailItem && (
           <>
             <h3 className="text-base font-bold text-white text-center mb-1">RINCIAN TRANSAKSI SIMPANAN</h3>
             <p className="text-xs text-navy-400 text-center mb-4">PRIMKOPPOL RESOR SUBANG</p>
-            <div className="border-t border-navy-700/50 pt-3 space-y-2">
-              <div className="flex justify-between"><span className="text-navy-400">Nama Anggota</span><span className="font-medium">{detailItem.namaAnggota}</span></div>
-              <div className="flex justify-between"><span className="text-navy-400">Tanggal</span><span>{new Date(detailItem.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span></div>
-              <div className="flex justify-between"><span className="text-navy-400">Jenis Transaksi</span>
-                <span className={detailItem.jenis === "setoran" ? "text-success-400 font-medium" : "text-warning-400 font-medium"}>
-                  {detailItem.jenis === "setoran" ? "Setoran" : "Pengambilan"}
-                </span>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-navy-400" />
+                <input
+                  type="date"
+                  value={detailDateFrom}
+                  onChange={(e) => setDetailDateFrom(e.target.value)}
+                  className="bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1 text-xs text-white outline-none"
+                  title="Dari tanggal"
+                />
+                <span className="text-navy-500 text-xs">s/d</span>
+                <input
+                  type="date"
+                  value={detailDateTo}
+                  onChange={(e) => setDetailDateTo(e.target.value)}
+                  className="bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1 text-xs text-white outline-none"
+                  title="Sampai tanggal"
+                />
               </div>
-              <div className="flex justify-between"><span className="text-navy-400">Kategori</span><span className="capitalize">{detailItem.kategori}</span></div>
-            </div>
-            <div className="border-t-2 border-navy-600 pt-3 mt-3 flex justify-between">
-              <span className="font-bold text-white">JUMLAH</span>
-              <span className={`font-bold ${detailItem.jenis === "setoran" ? "text-success-400" : "text-warning-400"}`}>
-                {detailItem.jenis === "setoran" ? "+" : "-"}{formatRupiah(detailItem.jumlah)}
-              </span>
-            </div>
-            {detailItem.keterangan && (
-              <div className="border-t border-navy-700/50 pt-3 mt-3">
-                <span className="text-navy-400 text-xs uppercase">Keterangan</span>
-                <p className="text-white mt-1">{detailItem.keterangan}</p>
+              <div className="flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-navy-400" />
+                <select
+                  value={detailKategori}
+                  onChange={(e) => setDetailKategori(e.target.value)}
+                  className="bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1 text-xs text-white outline-none cursor-pointer"
+                >
+                  <option value="semua">Semua Kategori</option>
+                  <option value="pokok">Pokok</option>
+                  <option value="wajib">Wajib</option>
+                  <option value="sukarela">Sukarela</option>
+                </select>
               </div>
+            </div>
+
+            <div className="border-t border-navy-700/50 pt-3 space-y-2 mb-3">
+              <div className="flex justify-between">
+                <span className="text-navy-400">Nama Anggota</span>
+                <span className="font-medium">{detailItem.namaAnggota}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-navy-400">Total Transaksi</span>
+                <span className="font-medium">{detailTransactions.length} transaksi</span>
+              </div>
+            </div>
+
+            {detailTransactions.length > 0 ? (
+              <div className="border border-navy-700/40 rounded-lg overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-navy-800/80 border-b border-navy-600/40">
+                      <th className="text-left px-2 py-1.5 text-navy-300 font-semibold">Tanggal</th>
+                      <th className="text-left px-2 py-1.5 text-navy-300 font-semibold">Jenis</th>
+                      <th className="text-left px-2 py-1.5 text-navy-300 font-semibold">Kategori</th>
+                      <th className="text-right px-2 py-1.5 text-navy-300 font-semibold">Jumlah</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detailTransactions.map((dt) => (
+                      <tr key={dt.id} className="border-b border-navy-800/50">
+                        <td className="px-2 py-1.5 text-navy-300">
+                          {new Date(dt.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <span className={dt.jenis === "setoran" ? "text-success-400" : "text-warning-400"}>
+                            {dt.jenis === "setoran" ? "Setoran" : "Pengambilan"}
+                          </span>
+                        </td>
+                        <td className="px-2 py-1.5 text-navy-300 capitalize">{dt.kategori}</td>
+                        <td className={`px-2 py-1.5 text-right font-medium ${dt.jenis === "setoran" ? "text-success-400" : "text-warning-400"}`}>
+                          {dt.jenis === "setoran" ? "+" : "-"}{formatRupiah(dt.jumlah)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-center text-navy-500 text-xs py-4">Tidak ada transaksi untuk filter ini.</p>
             )}
+
+            {detailTransactions.length > 0 && (() => {
+              const totalSetor = detailTransactions.filter(d => d.jenis === "setoran").reduce((s, d) => s + d.jumlah, 0);
+              const totalAmbil = detailTransactions.filter(d => d.jenis === "pengambilan").reduce((s, d) => s + d.jumlah, 0);
+              return (
+                <div className="border-t-2 border-navy-600 pt-3 mt-3 space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-navy-400">Total Setoran</span>
+                    <span className="text-success-400 font-medium">+{formatRupiah(totalSetor)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-navy-400">Total Pengambilan</span>
+                    <span className="text-warning-400 font-medium">-{formatRupiah(totalAmbil)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm pt-1 border-t border-navy-700/50">
+                    <span className="font-bold text-white">SALDO BERSIH</span>
+                    <span className={`font-bold ${totalSetor - totalAmbil >= 0 ? "text-success-400" : "text-danger-400"}`}>
+                      {formatRupiah(totalSetor - totalAmbil)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </>
         )}
       </DetailPopup>
@@ -492,7 +605,7 @@ export default function SimpananPage() {
                   </td>
                   <td className="px-5 py-3 text-sm text-navy-400">{t.keterangan}</td>
                   <td className="px-5 py-3 text-center">
-                    <button type="button" onClick={() => setDetailItem(t)} className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-accent-500/15 text-accent-400 hover:bg-accent-500/25 transition-colors cursor-pointer">
+                    <button type="button" onClick={() => openDetail(t)} className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-accent-500/15 text-accent-400 hover:bg-accent-500/25 transition-colors cursor-pointer">
                       <Eye className="w-3.5 h-3.5" /> Detail
                     </button>
                   </td>

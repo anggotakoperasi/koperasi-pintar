@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { X, Printer, Share2, Download, Loader2 } from "lucide-react";
 import html2canvas from "html2canvas-pro";
 
@@ -15,6 +15,17 @@ interface DetailPopupProps {
 export default function DetailPopup({ open, onClose, title, filename = "detail", children }: DetailPopupProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
+
+  const stableOnClose = useCallback(() => onClose(), [onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { e.preventDefault(); stableOnClose(); }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, stableOnClose]);
 
   if (!open) return null;
 
