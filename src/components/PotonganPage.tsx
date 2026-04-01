@@ -160,16 +160,16 @@ export default function PotonganPage() {
 
         <div className="overflow-x-auto" id="potongan-print-table">
           <table className="w-full">
-            <thead>
-              <tr className="border-b border-navy-700/30 print:border-gray-300">
-                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Anggota</th>
-                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Bulan</th>
-                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Simp. Wajib</th>
-                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Angs. Pinjaman</th>
-                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Jasa Pinjaman</th>
-                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3 font-bold print:text-black">Total</th>
-                <th className="text-center text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Status</th>
-                <th className="text-center text-xs font-medium text-navy-400 uppercase px-5 py-3 print:hidden">Rincian</th>
+            <thead className="bg-navy-800/80 sticky top-0">
+              <tr className="border-b border-navy-600/40 print:border-gray-300">
+                <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3 print:text-black">Anggota</th>
+                <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3 print:text-black">Bulan</th>
+                <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3 print:text-black">Simp. Wajib</th>
+                <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3 print:text-black">Angs. Pinjaman</th>
+                <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3 print:text-black">Jasa Pinjaman</th>
+                <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3 font-bold print:text-black">Total</th>
+                <th className="text-center text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3 print:text-black">Status</th>
+                <th className="text-center text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3 print:hidden">Rincian</th>
               </tr>
             </thead>
             <tbody>

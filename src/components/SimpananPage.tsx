@@ -456,15 +456,15 @@ export default function SimpananPage() {
 
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead>
-              <tr className="border-b border-navy-700/30">
-                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Tanggal</th>
-                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Anggota</th>
-                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Jenis</th>
-                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Kategori</th>
-                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3">Jumlah</th>
-                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Keterangan</th>
-                <th className="text-center text-xs font-medium text-navy-400 uppercase px-5 py-3">Rincian</th>
+            <thead className="bg-navy-800/80 sticky top-0">
+              <tr className="border-b border-navy-600/40">
+                <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Tanggal</th>
+                <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Anggota</th>
+                <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Jenis</th>
+                <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Kategori</th>
+                <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Jumlah</th>
+                <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Keterangan</th>
+                <th className="text-center text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Rincian</th>
               </tr>
             </thead>
             <tbody>

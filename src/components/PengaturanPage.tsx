@@ -172,8 +172,8 @@ export default function PengaturanPage() {
               <>
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-navy-700/30">
+                    <thead className="bg-navy-800/80">
+                      <tr className="border-b border-navy-600/40">
                         <th className="text-left text-xs font-medium text-navy-400 uppercase px-3 py-2">Nama</th>
                         <th className="text-left text-xs font-medium text-navy-400 uppercase px-3 py-2">Username</th>
                         <th className="text-left text-xs font-medium text-navy-400 uppercase px-3 py-2">Role</th>
