@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Building2,
   UserCog,
@@ -16,6 +16,8 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
+
+const SETTINGS_KEY = "koperasi_pengaturan";
 
 const colorStyles: Record<string, { icon: string; bg: string }> = {
   accent: { icon: "bg-accent-500/20 text-accent-400", bg: "border-accent-500/20 hover:bg-accent-500/5" },
@@ -34,16 +36,48 @@ interface KodePinjaman { kode: string; nama: string; bunga: string; }
 interface KodeSimpanan { kode: string; nama: string; keterangan: string; }
 interface Operator { id: number; nama: string; username: string; role: string; aktif: boolean; }
 
+const DEFAULTS = {
+  namaKoperasi: "Primkoppol Resor Subang",
+  alamat: "Jl. Otista No.52, Subang",
+  ketua: "IPTU (PURN) POL HARDOYO",
+  badanHukum: "No. 6513/BHPAD/KWK.10/II/2003 tertanggal 20 Februari 2003",
+  periode: "2025 - 2028",
+  kodePinjaman: [
+    { kode: "SP", nama: "Simpan Pinjam", bunga: "1.0" },
+    { kode: "KSG", nama: "Kredit Serba Guna", bunga: "1.5" },
+    { kode: "BM", nama: "Bank Mandiri", bunga: "0.8" },
+    { kode: "LN", nama: "Lainnya", bunga: "1.0" },
+  ] as KodePinjaman[],
+  kodeSimpanan: [
+    { kode: "PKK", nama: "Simpanan Pokok", keterangan: "Setoran awal saat mendaftar" },
+    { kode: "WJB", nama: "Simpanan Wajib", keterangan: "Setoran bulanan wajib" },
+    { kode: "SKR", nama: "Simpanan Sukarela", keterangan: "Setoran sukarela kapan saja" },
+  ] as KodeSimpanan[],
+};
+
+function loadSettings() {
+  if (typeof window === "undefined") return DEFAULTS;
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return DEFAULTS;
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULTS, ...parsed };
+  } catch {
+    return DEFAULTS;
+  }
+}
+
 export default function PengaturanPage() {
   const [activeModal, setActiveModal] = useState<ModalId>(null);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const [namaKoperasi, setNamaKoperasi] = useState("Primkoppol Resor Subang");
-  const [alamat, setAlamat] = useState("Jl. Otista No.52, Subang");
-  const [ketua, setKetua] = useState("IPTU (PURN) POL HARDOYO");
-  const [badanHukum, setBadanHukum] = useState("No. 6513/BHPAD/KWK.10/II/2003 tertanggal 20 Februari 2003");
-  const [periode, setPeriode] = useState("2025 - 2028");
+  const stored = loadSettings();
+  const [namaKoperasi, setNamaKoperasi] = useState(stored.namaKoperasi);
+  const [alamat, setAlamat] = useState(stored.alamat);
+  const [ketua, setKetua] = useState(stored.ketua);
+  const [badanHukum, setBadanHukum] = useState(stored.badanHukum);
+  const [periode, setPeriode] = useState(stored.periode);
 
   const [operators] = useState<Operator[]>([
     { id: 1, nama: "IPTU (PURN) POL HARDOYO", username: "admin", role: "Super Admin", aktif: true },
@@ -52,26 +86,22 @@ export default function PengaturanPage() {
     { id: 4, nama: "AIPDA RINA MARLINA", username: "manajer", role: "Manajer Unit", aktif: true },
   ]);
 
-  const [kodePinjaman, setKodePinjaman] = useState<KodePinjaman[]>([
-    { kode: "SP", nama: "Simpan Pinjam", bunga: "1.0" },
-    { kode: "KSG", nama: "Kredit Serba Guna", bunga: "1.5" },
-    { kode: "BM", nama: "Bank Mandiri", bunga: "0.8" },
-    { kode: "LN", nama: "Lainnya", bunga: "1.0" },
-  ]);
+  const [kodePinjaman, setKodePinjaman] = useState<KodePinjaman[]>(stored.kodePinjaman);
+  const [kodeSimpanan, setKodeSimpanan] = useState<KodeSimpanan[]>(stored.kodeSimpanan);
 
-  const [kodeSimpanan, setKodeSimpanan] = useState<KodeSimpanan[]>([
-    { kode: "PKK", nama: "Simpanan Pokok", keterangan: "Setoran awal saat mendaftar" },
-    { kode: "WJB", nama: "Simpanan Wajib", keterangan: "Setoran bulanan wajib" },
-    { kode: "SKR", nama: "Simpanan Sukarela", keterangan: "Setoran sukarela kapan saja" },
-  ]);
+  const persistSettings = useCallback(() => {
+    const data = { namaKoperasi, alamat, ketua, badanHukum, periode, kodePinjaman, kodeSimpanan };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+  }, [namaKoperasi, alamat, ketua, badanHukum, periode, kodePinjaman, kodeSimpanan]);
 
-  const simulateSave = (msg: string) => {
+  const saveWithPersist = (msg: string) => {
     setSaving(true);
     setTimeout(() => {
+      persistSettings();
       setSaving(false);
       setSuccessMsg(msg);
       setTimeout(() => setSuccessMsg(null), 2500);
-    }, 1000);
+    }, 600);
   };
 
   const closeModal = () => { setActiveModal(null); setSuccessMsg(null); };
@@ -133,7 +163,7 @@ export default function PengaturanPage() {
                   <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Periode Kepengurusan</label>
                   <input value={periode} onChange={(e) => setPeriode(e.target.value)} className={inputCls} />
                 </div>
-                <button type="button" disabled={saving} onClick={() => simulateSave("Setup program berhasil disimpan!")} className={btnPrimary}>
+                <button type="button" disabled={saving} onClick={() => saveWithPersist("Setup program berhasil disimpan!")} className={btnPrimary}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
                 </button>
               </>
@@ -187,7 +217,7 @@ export default function PengaturanPage() {
                     </div>
                   </div>
                 ))}
-                <button type="button" disabled={saving} onClick={() => simulateSave("Kode pinjaman berhasil disimpan!")} className={btnPrimary}>
+                <button type="button" disabled={saving} onClick={() => saveWithPersist("Kode pinjaman berhasil disimpan!")} className={btnPrimary}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
                 </button>
               </>
@@ -210,7 +240,7 @@ export default function PengaturanPage() {
                     </div>
                   </div>
                 ))}
-                <button type="button" disabled={saving} onClick={() => simulateSave("Kode simpanan berhasil disimpan!")} className={btnPrimary}>
+                <button type="button" disabled={saving} onClick={() => saveWithPersist("Kode simpanan berhasil disimpan!")} className={btnPrimary}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
                 </button>
               </>
@@ -222,7 +252,7 @@ export default function PengaturanPage() {
                   <div className="flex justify-between text-sm"><span className="text-navy-400">Terakhir Backup</span><span className="text-white">17 Mar 2026, 01:21</span></div>
                   <div className="flex justify-between text-sm"><span className="text-navy-400">Ukuran Data</span><span className="text-white">~2.4 MB</span></div>
                 </div>
-                <button type="button" disabled={saving} onClick={() => simulateSave("Backup berhasil! File tersimpan.")} className={btnPrimary}>
+                <button type="button" disabled={saving} onClick={() => saveWithPersist("Backup berhasil! File tersimpan.")} className={btnPrimary}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <HardDrive className="w-4 h-4" />} Mulai Backup
                 </button>
               </>
@@ -247,7 +277,7 @@ export default function PengaturanPage() {
                   <div className="flex justify-between text-sm"><span className="text-navy-400">Tabel</span><span className="text-white">anggota, transaksi_simpanan, pinjaman, potongan</span></div>
                   <div className="flex justify-between text-sm"><span className="text-navy-400">Terakhir Reindex</span><span className="text-white">Belum pernah</span></div>
                 </div>
-                <button type="button" disabled={saving} onClick={() => simulateSave("Reindex berhasil! Database telah dioptimalkan.")} className={btnPrimary}>
+                <button type="button" disabled={saving} onClick={() => saveWithPersist("Reindex berhasil! Database telah dioptimalkan.")} className={btnPrimary}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Mulai Reindex
                 </button>
               </>
