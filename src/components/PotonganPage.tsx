@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Receipt,
   Search,
@@ -10,13 +10,47 @@ import {
   XCircle,
   FileDown,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import StatCard from "./StatCard";
-import { potonganList, formatRupiah } from "@/data/mock";
+import { formatRupiah } from "@/data/mock";
+import type { Potongan } from "@/data/mock";
+import { fetchPotongan, exportCSV } from "@/lib/fetchers";
+
+function statusLabel(s: string): string {
+  switch (s) {
+    case "terkirim":
+      return "Terkirim";
+    case "proses":
+      return "Proses";
+    case "gagal":
+      return "Gagal";
+    default:
+      return s;
+  }
+}
 
 export default function PotonganPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("semua");
+  const [potonganList, setPotonganList] = useState<Potongan[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPotongan()
+      .then(setPotonganList)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 text-accent-400 animate-spin" />
+        <span className="ml-3 text-navy-300">Memuat data potongan...</span>
+      </div>
+    );
+  }
 
   const filtered = potonganList.filter((p) => {
     const matchSearch = p.namaAnggota.toLowerCase().includes(search.toLowerCase());
@@ -28,6 +62,34 @@ export default function PotonganPage() {
   const terkirim = potonganList.filter((p) => p.status === "terkirim").length;
   const proses = potonganList.filter((p) => p.status === "proses").length;
   const gagal = potonganList.filter((p) => p.status === "gagal").length;
+
+  const handleExport = () => {
+    const headers = [
+      "Anggota",
+      "ID Anggota",
+      "Bulan",
+      "Simp Wajib",
+      "Angs Pinjaman",
+      "Jasa Pinjaman",
+      "Total",
+      "Status",
+    ];
+    const rows = filtered.map((p) => [
+      p.namaAnggota,
+      p.anggotaId,
+      p.bulan,
+      String(p.simpananWajib),
+      String(p.angsuranPinjaman),
+      String(p.jasaPinjaman),
+      String(p.totalPotongan),
+      statusLabel(p.status),
+    ]);
+    exportCSV(headers, rows, "potongan.csv");
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   const statusBadge = (s: string) => {
     switch (s) {
@@ -56,17 +118,17 @@ export default function PotonganPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard title="Total Potongan" value={formatRupiah(totalPotongan)} subtitle="Bulan Maret 2026" icon={Receipt} color="blue" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 print:hidden">
+        <StatCard title="Total Potongan" value={formatRupiah(totalPotongan)} icon={Receipt} color="blue" />
         <StatCard title="Terkirim" value={terkirim.toString()} subtitle="potongan berhasil" icon={CheckCircle2} color="green" />
         <StatCard title="Dalam Proses" value={proses.toString()} subtitle="menunggu verifikasi" icon={Clock} color="amber" />
         <StatCard title="Gagal" value={gagal.toString()} subtitle="perlu ditindaklanjuti" icon={XCircle} color="red" />
       </div>
 
       <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 overflow-hidden">
-        <div className="p-5 border-b border-navy-700/30">
+        <div className="p-5 border-b border-navy-700/30 print:hidden">
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <h3 className="text-lg font-semibold text-white">Daftar Potongan - Maret 2026</h3>
+            <h3 className="text-lg font-semibold text-white">Daftar Potongan</h3>
             <div className="flex gap-2 w-full sm:w-auto">
               <div className="flex items-center bg-navy-800 rounded-xl px-3 py-2 gap-2 border border-navy-700/50 flex-1 sm:flex-initial">
                 <Search className="w-4 h-4 text-navy-400" />
@@ -81,11 +143,11 @@ export default function PotonganPage() {
                 </select>
                 <ChevronDown className="w-4 h-4 text-navy-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
-              <button className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer">
+              <button type="button" onClick={handlePrint} className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer">
                 <Printer className="w-4 h-4" />
                 <span className="hidden sm:inline">Cetak</span>
               </button>
-              <button className="flex items-center gap-2 bg-navy-700 hover:bg-navy-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer">
+              <button type="button" onClick={handleExport} className="flex items-center gap-2 bg-navy-700 hover:bg-navy-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer">
                 <FileDown className="w-4 h-4" />
                 <span className="hidden sm:inline">Export</span>
               </button>
@@ -93,42 +155,49 @@ export default function PotonganPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden print:block px-5 pt-5 pb-2">
+          <h3 className="text-lg font-semibold text-black">Daftar Potongan</h3>
+        </div>
+
+        <div className="overflow-x-auto" id="potongan-print-table">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-navy-700/30">
-                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Anggota</th>
-                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Bulan</th>
-                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3">Simp. Wajib</th>
-                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3">Angs. Pinjaman</th>
-                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3">Jasa Pinjaman</th>
-                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3 font-bold">Total</th>
-                <th className="text-center text-xs font-medium text-navy-400 uppercase px-5 py-3">Status</th>
+              <tr className="border-b border-navy-700/30 print:border-gray-300">
+                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Anggota</th>
+                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Bulan</th>
+                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Simp. Wajib</th>
+                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Angs. Pinjaman</th>
+                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Jasa Pinjaman</th>
+                <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3 font-bold print:text-black">Total</th>
+                <th className="text-center text-xs font-medium text-navy-400 uppercase px-5 py-3 print:text-black">Status</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((p) => (
-                <tr key={p.id} className="border-b border-navy-800/50 hover:bg-navy-800/30 transition-colors">
+                <tr key={p.id} className="border-b border-navy-800/50 hover:bg-navy-800/30 transition-colors print:border-gray-200 print:hover:bg-transparent">
                   <td className="px-5 py-3">
-                    <p className="text-sm font-medium text-white">{p.namaAnggota}</p>
-                    <p className="text-xs text-navy-400">ID: {p.anggotaId}</p>
+                    <p className="text-sm font-medium text-white print:text-black">{p.namaAnggota}</p>
+                    <p className="text-xs text-navy-400 print:text-gray-600">ID: {p.anggotaId}</p>
                   </td>
-                  <td className="px-5 py-3 text-sm text-navy-300">{p.bulan}</td>
-                  <td className="px-5 py-3 text-sm text-white text-right">{formatRupiah(p.simpananWajib)}</td>
-                  <td className="px-5 py-3 text-sm text-white text-right">{formatRupiah(p.angsuranPinjaman)}</td>
-                  <td className="px-5 py-3 text-sm text-white text-right">{formatRupiah(p.jasaPinjaman)}</td>
-                  <td className="px-5 py-3 text-sm text-accent-400 text-right font-bold">{formatRupiah(p.totalPotongan)}</td>
-                  <td className="px-5 py-3 text-center">{statusBadge(p.status)}</td>
+                  <td className="px-5 py-3 text-sm text-navy-300 print:text-black">{p.bulan}</td>
+                  <td className="px-5 py-3 text-sm text-white text-right print:text-black">{formatRupiah(p.simpananWajib)}</td>
+                  <td className="px-5 py-3 text-sm text-white text-right print:text-black">{formatRupiah(p.angsuranPinjaman)}</td>
+                  <td className="px-5 py-3 text-sm text-white text-right print:text-black">{formatRupiah(p.jasaPinjaman)}</td>
+                  <td className="px-5 py-3 text-sm text-accent-400 text-right font-bold print:text-black">{formatRupiah(p.totalPotongan)}</td>
+                  <td className="px-5 py-3 text-center">
+                    <span className="print:hidden">{statusBadge(p.status)}</span>
+                    <span className="hidden print:inline print:text-black">{statusLabel(p.status)}</span>
+                  </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-navy-600">
-                <td colSpan={2} className="px-5 py-3 text-sm font-bold text-white">TOTAL</td>
-                <td className="px-5 py-3 text-sm font-bold text-white text-right">{formatRupiah(filtered.reduce((s, p) => s + p.simpananWajib, 0))}</td>
-                <td className="px-5 py-3 text-sm font-bold text-white text-right">{formatRupiah(filtered.reduce((s, p) => s + p.angsuranPinjaman, 0))}</td>
-                <td className="px-5 py-3 text-sm font-bold text-white text-right">{formatRupiah(filtered.reduce((s, p) => s + p.jasaPinjaman, 0))}</td>
-                <td className="px-5 py-3 text-sm font-bold text-accent-400 text-right">{formatRupiah(filtered.reduce((s, p) => s + p.totalPotongan, 0))}</td>
+              <tr className="border-t-2 border-navy-600 print:border-gray-400">
+                <td colSpan={2} className="px-5 py-3 text-sm font-bold text-white print:text-black">TOTAL</td>
+                <td className="px-5 py-3 text-sm font-bold text-white text-right print:text-black">{formatRupiah(filtered.reduce((s, p) => s + p.simpananWajib, 0))}</td>
+                <td className="px-5 py-3 text-sm font-bold text-white text-right print:text-black">{formatRupiah(filtered.reduce((s, p) => s + p.angsuranPinjaman, 0))}</td>
+                <td className="px-5 py-3 text-sm font-bold text-white text-right print:text-black">{formatRupiah(filtered.reduce((s, p) => s + p.jasaPinjaman, 0))}</td>
+                <td className="px-5 py-3 text-sm font-bold text-accent-400 text-right print:text-black">{formatRupiah(filtered.reduce((s, p) => s + p.totalPotongan, 0))}</td>
                 <td className="px-5 py-3"></td>
               </tr>
             </tfoot>

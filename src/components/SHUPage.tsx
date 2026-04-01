@@ -1,11 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   PieChart as PieChartIcon,
   TrendingUp,
   Users,
   Calculator,
-  ArrowUpRight,
+  Loader2,
 } from "lucide-react";
 import {
   PieChart,
@@ -20,40 +21,69 @@ import {
   CartesianGrid,
 } from "recharts";
 import StatCard from "./StatCard";
-import {
-  shuData,
-  anggotaList,
-  formatRupiah,
-  getTierColor,
-  getTierLabel,
-} from "@/data/mock";
+import { formatRupiah, getTierColor, getTierLabel } from "@/data/mock";
+import type { Anggota } from "@/data/mock";
+import { fetchAnggota } from "@/lib/fetchers";
 
 const distribusiColors = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ec4899"];
 
-const shuPerAnggota = anggotaList
-  .filter((a) => a.status === "aktif")
-  .map((a) => {
-    const totalSimpanan = a.simpananPokok + a.simpananWajib + a.simpananSukarela;
-    const faktorSimpanan = totalSimpanan / 1000000;
-    const faktorSkor = a.skor / 100;
-    const estimasiSHU = Math.round(faktorSimpanan * faktorSkor * 2500000);
-    return { ...a, totalSimpanan, estimasiSHU };
-  })
-  .sort((a, b) => b.estimasiSHU - a.estimasiSHU);
-
-const top5SHU = shuPerAnggota.slice(0, 5).map((a) => ({
-  name: a.nama.split(" ").slice(1, 3).join(" "),
-  shu: a.estimasiSHU,
-}));
-
 export default function SHUPage() {
+  const [anggotaList, setAnggotaList] = useState<Anggota[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAnggota()
+      .then(setAnggotaList)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 text-accent-400 animate-spin" />
+        <span className="ml-3 text-navy-300">Memuat data SHU...</span>
+      </div>
+    );
+  }
+
+  const totalSimpanan = anggotaList.reduce((s, a) => s + a.simpananPokok + a.simpananWajib + a.simpananSukarela, 0);
+  const totalPinjaman = anggotaList.reduce((s, a) => s + a.totalPinjaman, 0);
+  const estimasiTotalSHU = Math.round(totalSimpanan * 0.03 + totalPinjaman * 0.02);
+
+  const shuDistribusi = [
+    { kategori: "Jasa Simpanan", persentase: 40, jumlah: Math.round(estimasiTotalSHU * 0.4) },
+    { kategori: "Jasa Pinjaman", persentase: 30, jumlah: Math.round(estimasiTotalSHU * 0.3) },
+    { kategori: "Dana Cadangan", persentase: 15, jumlah: Math.round(estimasiTotalSHU * 0.15) },
+    { kategori: "Dana Pengurus", persentase: 10, jumlah: Math.round(estimasiTotalSHU * 0.1) },
+    { kategori: "Dana Sosial", persentase: 5, jumlah: Math.round(estimasiTotalSHU * 0.05) },
+  ];
+
+  const shuPerAnggota = anggotaList
+    .filter((a) => a.status === "aktif")
+    .map((a) => {
+      const simpanan = a.simpananPokok + a.simpananWajib + a.simpananSukarela;
+      const faktorSimpanan = simpanan / 1000000;
+      const faktorSkor = a.skor / 100;
+      const estimasiSHU = Math.round(faktorSimpanan * faktorSkor * 250000);
+      return { ...a, totalSimpanan: simpanan, estimasiSHU };
+    })
+    .sort((a, b) => b.estimasiSHU - a.estimasiSHU);
+
+  const top5SHU = shuPerAnggota.slice(0, 5).map((a) => ({
+    name: a.nama.split(" ").slice(0, 2).join(" "),
+    shu: a.estimasiSHU,
+  }));
+
+  const anggotaAktif = anggotaList.filter((a) => a.status === "aktif").length;
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard title="Total SHU" value={formatRupiah(shuData.totalSHU)} subtitle="Tahun berjalan" icon={PieChartIcon} trend={shuData.pertumbuhan} color="blue" />
-        <StatCard title="SHU Tahun Lalu" value={formatRupiah(shuData.shuTahunLalu)} icon={TrendingUp} color="green" />
-        <StatCard title="Pertumbuhan" value={`+${shuData.pertumbuhan}%`} subtitle="dibanding tahun lalu" icon={ArrowUpRight} color="purple" />
-        <StatCard title="Anggota Berhak" value={anggotaList.filter((a) => a.status === "aktif").length.toString()} subtitle="anggota aktif" icon={Users} color="amber" />
+        <StatCard title="Estimasi Total SHU" value={formatRupiah(estimasiTotalSHU)} subtitle="Tahun berjalan" icon={PieChartIcon} color="blue" />
+        <StatCard title="Total Simpanan" value={formatRupiah(totalSimpanan)} icon={TrendingUp} color="green" />
+        <StatCard title="Total Pinjaman" value={formatRupiah(totalPinjaman)} icon={Calculator} color="purple" />
+        <StatCard title="Anggota Berhak" value={anggotaAktif.toString()} subtitle="anggota aktif" icon={Users} color="amber" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -64,7 +94,7 @@ export default function SHUPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={shuData.distribusi.map((d, i) => ({ ...d, fill: distribusiColors[i] }))}
+                  data={shuDistribusi.map((d, i) => ({ ...d, fill: distribusiColors[i] }))}
                   cx="50%"
                   cy="50%"
                   innerRadius={65}
@@ -73,19 +103,16 @@ export default function SHUPage() {
                   dataKey="jumlah"
                   nameKey="kategori"
                 >
-                  {shuData.distribusi.map((_, i) => (
+                  {shuDistribusi.map((_, i) => (
                     <Cell key={i} fill={distribusiColors[i]} />
                   ))}
                 </Pie>
-                <Tooltip
-                  formatter={(value) => formatRupiah(Number(value))}
-                  contentStyle={{ background: "#0f1d3d", border: "1px solid #2d4e93", borderRadius: "12px", fontSize: "12px" }}
-                />
+                <Tooltip formatter={(value) => formatRupiah(Number(value))} contentStyle={{ background: "#0f1d3d", border: "1px solid #2d4e93", borderRadius: "12px", fontSize: "12px" }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
           <div className="space-y-2 mt-4">
-            {shuData.distribusi.map((item, i) => (
+            {shuDistribusi.map((item, i) => (
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: distribusiColors[i] }} />
@@ -140,7 +167,7 @@ export default function SHUPage() {
               </tr>
             </thead>
             <tbody>
-              {shuPerAnggota.map((a, i) => (
+              {shuPerAnggota.slice(0, 50).map((a, i) => (
                 <tr key={a.id} className="border-b border-navy-800/50 hover:bg-navy-800/30 transition-colors">
                   <td className="px-5 py-3 text-sm text-navy-400">{i + 1}</td>
                   <td className="px-5 py-3">

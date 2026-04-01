@@ -1,36 +1,155 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Wallet,
   ArrowUpCircle,
   ArrowDownCircle,
-  Plus,
   Search,
   ChevronDown,
   TrendingUp,
+  Loader2,
+  X,
 } from "lucide-react";
 import StatCard from "./StatCard";
+import { formatRupiah } from "@/data/mock";
+import type { Anggota, TransaksiSimpanan } from "@/data/mock";
 import {
-  transaksiSimpananList,
-  anggotaList,
-  formatRupiah,
-} from "@/data/mock";
+  fetchAnggota,
+  fetchTransaksiSimpanan,
+  insertTransaksiSimpanan,
+} from "@/lib/fetchers";
+
+type ModalJenis = "setoran" | "pengambilan" | null;
+
+function formatThousands(v: string): string {
+  const digits = v.replace(/\D/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("id-ID");
+}
+
+function stripThousands(v: string): string {
+  return v.replace(/\./g, "");
+}
+
+const emptyForm = () => ({
+  anggotaQuery: "",
+  anggotaId: "",
+  kategori: "wajib" as TransaksiSimpanan["kategori"],
+  jumlah: "",
+  keterangan: "",
+});
 
 export default function SimpananPage() {
   const [search, setSearch] = useState("");
   const [filterJenis, setFilterJenis] = useState<string>("semua");
+  const [anggotaList, setAnggotaList] = useState<Anggota[]>([]);
+  const [transaksiList, setTransaksiList] = useState<TransaksiSimpanan[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = transaksiSimpananList.filter((t) => {
+  const [modalJenis, setModalJenis] = useState<ModalJenis>(null);
+  const [form, setForm] = useState(emptyForm());
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([fetchAnggota(), fetchTransaksiSimpanan()])
+      .then(([a, t]) => {
+        setAnggotaList(a);
+        setTransaksiList(t);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const refreshData = async () => {
+    const [a, t] = await Promise.all([fetchAnggota(), fetchTransaksiSimpanan()]);
+    setAnggotaList(a);
+    setTransaksiList(t);
+  };
+
+  const openModal = (jenis: "setoran" | "pengambilan") => {
+    setForm(emptyForm());
+    setSubmitError(null);
+    setModalJenis(jenis);
+  };
+
+  const closeModal = () => {
+    setModalJenis(null);
+    setSubmitError(null);
+  };
+
+  const selectedAnggota = useMemo(
+    () => anggotaList.find((a) => a.id === form.anggotaId) ?? null,
+    [anggotaList, form.anggotaId]
+  );
+
+  const filteredModalAnggota = useMemo(() => {
+    const q = form.anggotaQuery.trim().toLowerCase();
+    return anggotaList.filter((a) => {
+      if (!q) return true;
+      return (
+        a.nama.toLowerCase().includes(q) ||
+        a.nrp.toLowerCase().includes(q) ||
+        a.nomorAnggota.toLowerCase().includes(q)
+      );
+    });
+  }, [anggotaList, form.anggotaQuery]);
+
+  const handleSubmitModal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalJenis || !selectedAnggota) {
+      setSubmitError("Pilih anggota terlebih dahulu.");
+      return;
+    }
+    const jumlahNum = Number(stripThousands(form.jumlah));
+    if (!Number.isFinite(jumlahNum) || jumlahNum <= 0) {
+      setSubmitError("Jumlah harus berupa angka positif.");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await insertTransaksiSimpanan({
+        tanggal: new Date().toISOString().slice(0, 10),
+        anggotaId: selectedAnggota.id,
+        namaAnggota: selectedAnggota.nama,
+        jenis: modalJenis,
+        kategori: form.kategori,
+        jumlah: jumlahNum,
+        keterangan: form.keterangan.trim(),
+      });
+      await refreshData();
+      setModalJenis(null);
+      setSubmitError(null);
+    } catch (err) {
+      console.error(err);
+      setSubmitError(err instanceof Error ? err.message : "Gagal menyimpan transaksi.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 text-accent-400 animate-spin" />
+        <span className="ml-3 text-navy-300">Memuat data simpanan...</span>
+      </div>
+    );
+  }
+
+  const filtered = transaksiList.filter((t) => {
     const matchSearch = t.namaAnggota.toLowerCase().includes(search.toLowerCase());
     const matchJenis = filterJenis === "semua" || t.jenis === filterJenis;
     return matchSearch && matchJenis;
   });
 
-  const totalSetoran = transaksiSimpananList
+  const totalSetoran = transaksiList
     .filter((t) => t.jenis === "setoran")
     .reduce((s, t) => s + t.jumlah, 0);
-  const totalPengambilan = transaksiSimpananList
+  const totalPengambilan = transaksiList
     .filter((t) => t.jenis === "pengambilan")
     .reduce((s, t) => s + t.jumlah, 0);
   const totalSimpananAll = anggotaList.reduce(
@@ -38,12 +157,189 @@ export default function SimpananPage() {
     0
   );
 
+  const modalTitle =
+    modalJenis === "setoran"
+      ? "Setoran Simpanan"
+      : modalJenis === "pengambilan"
+        ? "Pengambilan Simpanan"
+        : "";
+
   return (
     <div className="space-y-6">
+      {modalJenis && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+          role="presentation"
+          onClick={(ev) => {
+            if (ev.target === ev.currentTarget && !submitting) closeModal();
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-navy-700 bg-navy-900 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="simpanan-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-navy-700 px-5 py-4">
+              <h2 id="simpanan-modal-title" className="text-lg font-semibold text-white">
+                {modalTitle}
+              </h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                disabled={submitting}
+                className="rounded-lg p-1.5 text-navy-400 hover:bg-navy-800 hover:text-white transition-colors disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                aria-label="Tutup"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitModal} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">
+                  Anggota
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-navy-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={form.anggotaQuery}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, anggotaQuery: e.target.value, anggotaId: "" }))
+                    }
+                    placeholder="Cari nama, NRP, atau nomor anggota..."
+                    className="w-full rounded-xl border border-navy-700 bg-navy-800 pl-9 pr-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none focus:border-accent-500/50 focus:ring-1 focus:ring-accent-500/30"
+                  />
+                </div>
+                {selectedAnggota ? (
+                  <p className="mt-2 text-sm text-success-400">
+                    Dipilih: {selectedAnggota.nama} ({selectedAnggota.nomorAnggota})
+                  </p>
+                ) : null}
+                <ul className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-navy-700 bg-navy-800/80 divide-y divide-navy-700/50">
+                  {filteredModalAnggota.length === 0 ? (
+                    <li className="px-3 py-3 text-sm text-navy-500 text-center">
+                      Tidak ada anggota yang cocok.
+                    </li>
+                  ) : (
+                    filteredModalAnggota.map((a) => (
+                      <li key={a.id}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm((f) => ({
+                              ...f,
+                              anggotaId: a.id,
+                              anggotaQuery: `${a.nama} — ${a.nomorAnggota}`,
+                            }))
+                          }
+                          className={`w-full text-left px-3 py-2.5 text-sm transition-colors cursor-pointer ${
+                            form.anggotaId === a.id
+                              ? "bg-accent-600/20 text-accent-300"
+                              : "text-navy-200 hover:bg-navy-700/50 text-white"
+                          }`}
+                        >
+                          <span className="font-medium">{a.nama}</span>
+                          <span className="text-navy-400 text-xs block">
+                            {a.nomorAnggota} · {a.nrp}
+                          </span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">
+                  Kategori
+                </label>
+                <select
+                  value={form.kategori}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      kategori: e.target.value as TransaksiSimpanan["kategori"],
+                    }))
+                  }
+                  className="w-full appearance-none rounded-xl border border-navy-700 bg-navy-800 px-3 py-2.5 pr-10 text-sm text-white outline-none cursor-pointer focus:border-accent-500/50"
+                >
+                  <option value="pokok">Pokok</option>
+                  <option value="wajib">Wajib</option>
+                  <option value="sukarela">Sukarela</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">
+                  Jumlah (Rp)
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={form.jumlah}
+                  onChange={(e) => setForm((f) => ({ ...f, jumlah: stripThousands(e.target.value).replace(/\D/g, "") }))}
+                  onBlur={(e) => setForm((f) => ({ ...f, jumlah: formatThousands(e.target.value) }))}
+                  onFocus={(e) => setForm((f) => ({ ...f, jumlah: stripThousands(e.target.value) }))}
+                  placeholder="0"
+                  className="w-full rounded-xl border border-navy-700 bg-navy-800 px-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none focus:border-accent-500/50 focus:ring-1 focus:ring-accent-500/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">
+                  Keterangan
+                </label>
+                <textarea
+                  value={form.keterangan}
+                  onChange={(e) => setForm((f) => ({ ...f, keterangan: e.target.value }))}
+                  rows={3}
+                  placeholder="Opsional"
+                  className="w-full resize-none rounded-xl border border-navy-700 bg-navy-800 px-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none focus:border-accent-500/50 focus:ring-1 focus:ring-accent-500/30"
+                />
+              </div>
+
+              {submitError ? (
+                <p className="text-sm text-red-400 bg-red-950/40 border border-red-900/50 rounded-xl px-3 py-2">
+                  {submitError}
+                </p>
+              ) : null}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={submitting}
+                  className="flex-1 rounded-xl border border-navy-600 bg-navy-800 py-2.5 text-sm font-medium text-navy-200 hover:bg-navy-700 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-accent-500 hover:bg-accent-600 py-2.5 text-sm font-medium text-white transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    "Simpan"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard title="Total Simpanan" value={formatRupiah(totalSimpananAll)} icon={Wallet} color="blue" trend={8.5} />
-        <StatCard title="Setoran Bulan Ini" value={formatRupiah(totalSetoran)} icon={ArrowUpCircle} color="green" />
-        <StatCard title="Pengambilan Bulan Ini" value={formatRupiah(totalPengambilan)} icon={ArrowDownCircle} color="amber" />
+        <StatCard title="Total Simpanan" value={formatRupiah(totalSimpananAll)} icon={Wallet} color="blue" />
+        <StatCard title="Total Setoran" value={formatRupiah(totalSetoran)} icon={ArrowUpCircle} color="green" />
+        <StatCard title="Total Pengambilan" value={formatRupiah(totalPengambilan)} icon={ArrowDownCircle} color="amber" />
         <StatCard title="Net Simpanan" value={formatRupiah(totalSetoran - totalPengambilan)} icon={TrendingUp} color="purple" />
       </div>
 
@@ -51,7 +347,11 @@ export default function SimpananPage() {
         <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 p-5">
           <h3 className="text-base font-semibold text-white mb-4">Input Transaksi Cepat</h3>
           <div className="space-y-3">
-            <button className="w-full flex items-center gap-3 bg-success-600/10 border border-success-600/20 hover:bg-success-600/20 rounded-xl p-4 transition-colors cursor-pointer">
+            <button
+              type="button"
+              onClick={() => openModal("setoran")}
+              className="w-full flex items-center gap-3 bg-success-600/10 border border-success-600/20 hover:bg-success-600/20 rounded-xl p-4 transition-colors cursor-pointer"
+            >
               <div className="w-10 h-10 rounded-xl bg-success-500/20 flex items-center justify-center">
                 <ArrowUpCircle className="w-5 h-5 text-success-400" />
               </div>
@@ -60,7 +360,11 @@ export default function SimpananPage() {
                 <p className="text-xs text-navy-400">Setoran wajib, sukarela, atau pokok</p>
               </div>
             </button>
-            <button className="w-full flex items-center gap-3 bg-warning-600/10 border border-warning-600/20 hover:bg-warning-600/20 rounded-xl p-4 transition-colors cursor-pointer">
+            <button
+              type="button"
+              onClick={() => openModal("pengambilan")}
+              className="w-full flex items-center gap-3 bg-warning-600/10 border border-warning-600/20 hover:bg-warning-600/20 rounded-xl p-4 transition-colors cursor-pointer"
+            >
               <div className="w-10 h-10 rounded-xl bg-warning-500/20 flex items-center justify-center">
                 <ArrowDownCircle className="w-5 h-5 text-warning-400" />
               </div>
@@ -76,21 +380,9 @@ export default function SimpananPage() {
           <h3 className="text-base font-semibold text-white mb-4">Ringkasan per Kategori</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
-              {
-                label: "Simpanan Pokok",
-                total: anggotaList.reduce((s, a) => s + a.simpananPokok, 0),
-                color: "accent",
-              },
-              {
-                label: "Simpanan Wajib",
-                total: anggotaList.reduce((s, a) => s + a.simpananWajib, 0),
-                color: "success",
-              },
-              {
-                label: "Simpanan Sukarela",
-                total: anggotaList.reduce((s, a) => s + a.simpananSukarela, 0),
-                color: "warning",
-              },
+              { label: "Simpanan Pokok", total: anggotaList.reduce((s, a) => s + a.simpananPokok, 0), color: "accent" },
+              { label: "Simpanan Wajib", total: anggotaList.reduce((s, a) => s + a.simpananWajib, 0), color: "success" },
+              { label: "Simpanan Sukarela", total: anggotaList.reduce((s, a) => s + a.simpananSukarela, 0), color: "warning" },
             ].map((item, i) => (
               <div key={i} className="bg-navy-800/50 rounded-xl p-4 md:text-center flex md:block items-center justify-between">
                 <p className="text-xs text-navy-400 md:mb-2">{item.label}</p>
@@ -109,20 +401,10 @@ export default function SimpananPage() {
             <div className="flex gap-2 w-full sm:w-auto">
               <div className="flex items-center bg-navy-800 rounded-xl px-3 py-2 gap-2 border border-navy-700/50 flex-1 sm:flex-initial">
                 <Search className="w-4 h-4 text-navy-400" />
-                <input
-                  type="text"
-                  placeholder="Cari anggota..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-transparent text-sm text-white placeholder-navy-400 outline-none w-full sm:w-40"
-                />
+                <input type="text" placeholder="Cari anggota..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-transparent text-sm text-white placeholder-navy-400 outline-none w-full sm:w-40" />
               </div>
               <div className="relative">
-                <select
-                  value={filterJenis}
-                  onChange={(e) => setFilterJenis(e.target.value)}
-                  className="appearance-none bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2 pr-8 text-sm text-white outline-none cursor-pointer"
-                >
+                <select value={filterJenis} onChange={(e) => setFilterJenis(e.target.value)} className="appearance-none bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2 pr-8 text-sm text-white outline-none cursor-pointer">
                   <option value="semua">Semua</option>
                   <option value="setoran">Setoran</option>
                   <option value="pengambilan">Pengambilan</option>
