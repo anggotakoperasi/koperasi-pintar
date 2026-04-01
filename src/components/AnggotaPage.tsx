@@ -192,7 +192,7 @@ export default function AnggotaPage() {
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addForm.nama.trim() || !addForm.nrp.trim()) {
-      setFeedback({ type: "error", message: "Nama dan NRP wajib diisi." });
+      setFeedback({ type: "error", message: "Nama dan NRP/NIP wajib diisi." });
       return;
     }
     setFormBusy(true);
@@ -230,7 +230,7 @@ export default function AnggotaPage() {
     e.preventDefault();
     if (!editingId) return;
     if (!editForm.nama.trim() || !editForm.nrp.trim()) {
-      setFeedback({ type: "error", message: "Nama dan NRP wajib diisi." });
+      setFeedback({ type: "error", message: "Nama dan NRP/NIP wajib diisi." });
       return;
     }
     setFormBusy(true);
@@ -381,7 +381,7 @@ export default function AnggotaPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-navy-400 mb-1.5">NRP</label>
+                <label className="block text-xs font-medium text-navy-400 mb-1.5">NRP/NIP</label>
                 <input
                   type="text"
                   value={addForm.nrp}
@@ -489,7 +489,7 @@ export default function AnggotaPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-navy-400 mb-1.5">NRP</label>
+                <label className="block text-xs font-medium text-navy-400 mb-1.5">NRP/NIP</label>
                 <input
                   type="text"
                   value={editForm.nrp}
@@ -562,7 +562,7 @@ export default function AnggotaPage() {
                 <Search className="w-4 h-4 text-navy-400" />
                 <input
                   type="text"
-                  placeholder="Cari nama / NRP..."
+                  placeholder="Cari nama / NRP/NIP..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="bg-transparent text-sm text-white placeholder-navy-400 outline-none w-full sm:w-48"
@@ -600,7 +600,7 @@ export default function AnggotaPage() {
             <thead>
               <tr className="border-b border-navy-700/30">
                 <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">No.</th>
-                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Nama / NRP</th>
+                <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Nama / NRP/NIP</th>
                 <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Satuan</th>
                 <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Tier</th>
                 <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3">Total Simpanan</th>
@@ -623,7 +623,7 @@ export default function AnggotaPage() {
                     <td className="px-5 py-3">
                       <p className="text-sm font-medium text-white">{a.nama}</p>
                       <p className="text-xs text-navy-400">
-                        {a.pangkat} - NRP: {a.nrp}
+                        {a.pangkat} - NRP/NIP: {a.nrp}
                       </p>
                     </td>
                     <td className="px-5 py-3 text-sm text-navy-300">{a.satuan}</td>
@@ -739,7 +739,7 @@ export default function AnggotaPage() {
                   <p className="text-base font-bold text-white mt-1">{detailAnggota.nomorAnggota}</p>
                 </div>
                 <div className="bg-navy-800/60 rounded-xl p-3 border border-navy-700/30">
-                  <p className="text-[11px] text-navy-500 uppercase tracking-wider">NRP</p>
+                  <p className="text-[11px] text-navy-500 uppercase tracking-wider">NRP/NIP</p>
                   <p className="text-base font-bold text-white mt-1">{detailAnggota.nrp || "-"}</p>
                 </div>
                 <div className="bg-navy-800/60 rounded-xl p-3 border border-navy-700/30">
@@ -882,7 +882,7 @@ export default function AnggotaPage() {
               </p>
               <p className="text-base font-semibold text-white mb-1">{deleteConfirm.nama}</p>
               <p className="text-xs text-navy-500 mb-4">
-                {deleteConfirm.pangkat} — NRP: {deleteConfirm.nrp}
+                {deleteConfirm.pangkat} — NRP/NIP: {deleteConfirm.nrp}
               </p>
               <p className="text-xs text-danger-400/80 bg-danger-600/10 border border-danger-600/20 rounded-xl px-3 py-2 mb-5">
                 Semua data terkait (simpanan, pinjaman, potongan) juga akan dihapus. Tindakan ini tidak bisa dibatalkan.

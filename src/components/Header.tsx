@@ -165,7 +165,7 @@ export default function Header({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchDropdownOpen(true)}
-              placeholder="Cari nama, NRP, no. anggota..."
+              placeholder="Cari nama, NRP/NIP, no. anggota..."
               className="bg-transparent text-sm text-white placeholder-navy-400 outline-none w-48"
               autoComplete="off"
               aria-expanded={showSearchPanel}
@@ -205,7 +205,7 @@ export default function Header({
                           <span className="text-navy-400">Satuan:</span> {a.satuan || "—"}
                         </p>
                         <p className="text-xs text-navy-300 mt-0.5">
-                          <span className="text-navy-400">NRP:</span> {a.nrp || "—"}
+                          <span className="text-navy-400">NRP/NIP:</span> {a.nrp || "—"}
                         </p>
                       </button>
                     </li>

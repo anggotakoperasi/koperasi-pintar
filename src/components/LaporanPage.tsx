@@ -69,7 +69,7 @@ const reportGenerators: Record<string, ReportGenerator> = {
     return {
       title: "Daftar Anggota Aktif",
       subtitle: `Total ${aktif.length} anggota aktif`,
-      headers: ["No", "No. Anggota", "Nama", "Pangkat", "Satuan", "NRP", "Bergabung"],
+      headers: ["No", "No. Anggota", "Nama", "Pangkat", "Satuan", "NRP/NIP", "Bergabung"],
       rows: aktif.map((a, i) => [
         String(i + 1), a.nomorAnggota, a.nama, a.pangkat, a.satuan, a.nrp, fmtDate(a.bergabung),
       ]),
@@ -124,7 +124,7 @@ const reportGenerators: Record<string, ReportGenerator> = {
     return {
       title: "Daftar Anggota per Satuan",
       subtitle: `${grouped.size} satuan, ${aktif.length} anggota`,
-      headers: ["No", "Satuan", "No. Anggota", "Nama", "Pangkat", "NRP"],
+      headers: ["No", "Satuan", "No. Anggota", "Nama", "Pangkat", "NRP/NIP"],
       rows,
       summary: Array.from(grouped.entries())
         .sort((a, b) => b[1].length - a[1].length)

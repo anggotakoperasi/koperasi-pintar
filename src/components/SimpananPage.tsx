@@ -212,7 +212,7 @@ export default function SimpananPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, anggotaQuery: e.target.value, anggotaId: "" }))
                     }
-                    placeholder="Cari nama, NRP, atau nomor anggota..."
+                    placeholder="Cari nama, NRP/NIP, atau nomor anggota..."
                     className="w-full rounded-xl border border-navy-700 bg-navy-800 pl-9 pr-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none focus:border-accent-500/50 focus:ring-1 focus:ring-accent-500/30"
                   />
                 </div>
