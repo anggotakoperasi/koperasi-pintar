@@ -107,12 +107,16 @@ export default function AnggotaPage() {
     satuan: string;
     nrp: string;
     bergabung: string;
+    noHp: string;
+    email: string;
   }>({
     nama: "",
     pangkat: PANGKAT_OPTIONS[0],
     satuan: SATUAN_OPTIONS[0],
     nrp: "",
     bergabung: todayISODate(),
+    noHp: "",
+    email: "",
   });
 
   const [editForm, setEditForm] = useState<{
@@ -121,12 +125,16 @@ export default function AnggotaPage() {
     satuan: string;
     nrp: string;
     status: Anggota["status"];
+    noHp: string;
+    email: string;
   }>({
     nama: "",
     pangkat: PANGKAT_OPTIONS[0],
     satuan: SATUAN_OPTIONS[0],
     nrp: "",
     status: "aktif",
+    noHp: "",
+    email: "",
   });
 
   const refreshList = useCallback(async () => {
@@ -160,6 +168,8 @@ export default function AnggotaPage() {
       satuan: SATUAN_OPTIONS[0],
       nrp: "",
       bergabung: todayISODate(),
+      noHp: "",
+      email: "",
     });
     setAddOpen(true);
   };
@@ -174,6 +184,8 @@ export default function AnggotaPage() {
       satuan: a.satuan,
       nrp: a.nrp,
       status: a.status,
+      noHp: a.noHp || "",
+      email: a.email || "",
     });
     setEditOpen(true);
   };
@@ -214,6 +226,8 @@ export default function AnggotaPage() {
         totalPinjaman: 0,
         sisaPinjaman: 0,
         bergabung: addForm.bergabung,
+        noHp: addForm.noHp.trim(),
+        email: addForm.email.trim(),
       });
       await refreshList();
       setAddOpen(false);
@@ -241,6 +255,8 @@ export default function AnggotaPage() {
         satuan: editForm.satuan,
         nrp: editForm.nrp.trim(),
         status: editForm.status,
+        noHp: editForm.noHp.trim(),
+        email: editForm.email.trim(),
       });
       await refreshList();
       setEditOpen(false);
@@ -392,6 +408,26 @@ export default function AnggotaPage() {
                 />
               </div>
               <div>
+                <label className="block text-xs font-medium text-navy-400 mb-1.5">No. Hp</label>
+                <input
+                  type="tel"
+                  value={addForm.noHp}
+                  onChange={(e) => setAddForm((f) => ({ ...f, noHp: e.target.value }))}
+                  className={inputClass}
+                  placeholder="08xxxxxxxxxx"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-navy-400 mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={addForm.email}
+                  onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
+                  className={inputClass}
+                  placeholder="contoh@email.com"
+                />
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-navy-400 mb-1.5">Bergabung</label>
                 <input
                   type="date"
@@ -496,6 +532,26 @@ export default function AnggotaPage() {
                   onChange={(e) => setEditForm((f) => ({ ...f, nrp: e.target.value }))}
                   className={inputClass}
                   required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-navy-400 mb-1.5">No. Hp</label>
+                <input
+                  type="tel"
+                  value={editForm.noHp}
+                  onChange={(e) => setEditForm((f) => ({ ...f, noHp: e.target.value }))}
+                  className={inputClass}
+                  placeholder="08xxxxxxxxxx"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-navy-400 mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                  className={inputClass}
+                  placeholder="contoh@email.com"
                 />
               </div>
               <div>
@@ -756,6 +812,14 @@ export default function AnggotaPage() {
                   <p className="text-base font-bold text-white mt-1">
                     {detailAnggota.bergabung ? new Date(detailAnggota.bergabung).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"}
                   </p>
+                </div>
+                <div className="bg-navy-800/60 rounded-xl p-3 border border-navy-700/30">
+                  <p className="text-[11px] text-navy-500 uppercase tracking-wider">No. Hp</p>
+                  <p className="text-base font-bold text-white mt-1">{detailAnggota.noHp || "-"}</p>
+                </div>
+                <div className="bg-navy-800/60 rounded-xl p-3 border border-navy-700/30">
+                  <p className="text-[11px] text-navy-500 uppercase tracking-wider">Email</p>
+                  <p className="text-base font-bold text-white mt-1 break-all">{detailAnggota.email || "-"}</p>
                 </div>
               </div>
 

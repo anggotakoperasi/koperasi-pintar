@@ -18,6 +18,8 @@ function mapAnggota(row: any): Anggota {
     totalPinjaman: row.total_pinjaman,
     sisaPinjaman: row.sisa_pinjaman,
     bergabung: row.bergabung,
+    noHp: row.no_hp || "",
+    email: row.email || "",
   };
 }
 
@@ -165,6 +167,8 @@ export async function insertAnggota(anggota: Omit<Anggota, "id">) {
     total_pinjaman: anggota.totalPinjaman || 0,
     sisa_pinjaman: anggota.sisaPinjaman || 0,
     bergabung: anggota.bergabung,
+    no_hp: anggota.noHp || "",
+    email: anggota.email || "",
   });
   if (error) throw error;
   return id;
@@ -190,6 +194,8 @@ export async function updateAnggota(id: string, updates: Partial<Anggota>) {
   if (updates.simpananPokok !== undefined) mapped.simpanan_pokok = updates.simpananPokok;
   if (updates.simpananWajib !== undefined) mapped.simpanan_wajib = updates.simpananWajib;
   if (updates.simpananSukarela !== undefined) mapped.simpanan_sukarela = updates.simpananSukarela;
+  if (updates.noHp !== undefined) mapped.no_hp = updates.noHp;
+  if (updates.email !== undefined) mapped.email = updates.email;
   const { error } = await supabase.from("anggota").update(mapped).eq("id", id);
   if (error) throw error;
 }

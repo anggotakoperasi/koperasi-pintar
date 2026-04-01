@@ -14,6 +14,8 @@ export interface Anggota {
   totalPinjaman: number;
   sisaPinjaman: number;
   bergabung: string;
+  noHp: string;
+  email: string;
 }
 
 export interface TransaksiSimpanan {
