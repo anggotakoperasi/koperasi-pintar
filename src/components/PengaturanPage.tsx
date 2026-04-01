@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Building2,
   UserCog,
@@ -104,7 +104,16 @@ export default function PengaturanPage() {
     }, 600);
   };
 
-  const closeModal = () => { setActiveModal(null); setSuccessMsg(null); };
+  const closeModal = useCallback(() => { setActiveModal(null); setSuccessMsg(null); }, []);
+
+  useEffect(() => {
+    if (!activeModal) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { e.preventDefault(); closeModal(); }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [activeModal, closeModal]);
 
   const modalShell = "fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/80 backdrop-blur-sm";
   const modalPanel = "w-full max-w-lg max-h-[85vh] flex flex-col rounded-2xl border border-navy-600/50 bg-navy-950 shadow-2xl shadow-black/40";

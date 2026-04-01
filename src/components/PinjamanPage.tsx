@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, type FormEvent } from "react";
+import { useState, useEffect, useMemo, useCallback, type FormEvent } from "react";
 import {
   HandCoins,
   Search,
@@ -115,6 +115,22 @@ export default function PinjamanPage() {
       .catch(console.error)
       .finally(() => setLoadingAnggota(false));
   }, [modalBaruOpen]);
+
+  const closeModalBaru = useCallback(() => { if (!submittingBaru) setModalBaruOpen(false); }, [submittingBaru]);
+  const closeModalBayar = useCallback(() => { if (!submittingBayar) setModalBayarOpen(false); }, [submittingBayar]);
+
+  useEffect(() => {
+    if (!modalBaruOpen && !modalBayarOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (modalBaruOpen) closeModalBaru();
+        if (modalBayarOpen) closeModalBayar();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [modalBaruOpen, modalBayarOpen, closeModalBaru, closeModalBayar]);
 
   const tanggalPinjamBaru = useMemo(() => todayIso(), [modalBaruOpen]);
 

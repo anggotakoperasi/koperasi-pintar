@@ -173,6 +173,22 @@ export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedCle
     }
   }, [globalSelectedAnggota, onGlobalSelectedClear]);
 
+  useEffect(() => {
+    const anyOpen = addOpen || editOpen || !!deleteConfirm || !!detailAnggota;
+    if (!anyOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (deleteConfirm) { setDeleteConfirm(null); return; }
+        if (detailAnggota) { setDetailAnggota(null); return; }
+        if (editOpen && !formBusy) { setEditOpen(false); setEditingId(null); return; }
+        if (addOpen && !formBusy) { setAddOpen(false); return; }
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [addOpen, editOpen, deleteConfirm, detailAnggota, formBusy]);
+
   const openAdd = () => {
     setAddForm({
       nama: "",
