@@ -13,11 +13,13 @@ import {
   Banknote,
   Loader2,
   X,
+  Eye,
 } from "lucide-react";
 import StatCard from "./StatCard";
 import { formatRupiah, getStatusPinjamanBg } from "@/data/mock";
 import type { Pinjaman, Anggota } from "@/data/mock";
 import { fetchPinjaman, fetchAnggota, insertPinjaman, bayarAngsuran } from "@/lib/fetchers";
+import DetailPopup from "./DetailPopup";
 
 const JENIS_PINJAMAN = [
   "Simpan Pinjam",
@@ -91,6 +93,7 @@ export default function PinjamanPage() {
   const [bayarPinjamanId, setBayarPinjamanId] = useState("");
   const [bayarPokok, setBayarPokok] = useState("");
   const [bayarJasa, setBayarJasa] = useState("");
+  const [detailItem, setDetailItem] = useState<Pinjaman | null>(null);
 
   const refreshPinjaman = () =>
     fetchPinjaman()
@@ -512,6 +515,40 @@ export default function PinjamanPage() {
         </div>
       )}
 
+      <DetailPopup
+        open={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        title="Rincian Pinjaman"
+        filename={`pinjaman-${detailItem?.namaAnggota?.replace(/\s+/g, "_") || "detail"}`}
+      >
+        {detailItem && (
+          <>
+            <h3 className="text-base font-bold text-white text-center mb-1">RINCIAN PINJAMAN</h3>
+            <p className="text-xs text-navy-400 text-center mb-4">PRIMKOPPOL RESOR SUBANG</p>
+            <div className="border-t border-navy-700/50 pt-3 space-y-2">
+              <div className="flex justify-between"><span className="text-navy-400">Nama Anggota</span><span className="font-medium">{detailItem.namaAnggota}</span></div>
+              <div className="flex justify-between"><span className="text-navy-400">Jenis Pinjaman</span><span>{detailItem.jenisPinjaman}</span></div>
+              <div className="flex justify-between"><span className="text-navy-400">Tanggal Pinjam</span><span>{new Date(detailItem.tanggalPinjam).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span></div>
+              <div className="flex justify-between"><span className="text-navy-400">Jatuh Tempo</span><span>{new Date(detailItem.jatuhTempo).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span></div>
+            </div>
+            <div className="border-t border-navy-700/50 pt-3 mt-3 space-y-2">
+              <h4 className="text-xs font-semibold text-navy-400 uppercase">Detail Keuangan</h4>
+              <div className="flex justify-between"><span className="text-navy-300">Jumlah Pinjaman</span><span className="text-white">{formatRupiah(detailItem.jumlahPinjaman)}</span></div>
+              <div className="flex justify-between"><span className="text-navy-300">Sisa Pinjaman</span><span className="text-warning-400 font-medium">{formatRupiah(detailItem.sisaPinjaman)}</span></div>
+              <div className="flex justify-between"><span className="text-navy-300">Bunga / Bulan</span><span className="text-white">{detailItem.bungaPerBulan}%</span></div>
+              <div className="flex justify-between"><span className="text-navy-300">Tenor</span><span className="text-white">{detailItem.sisaTenor}/{detailItem.tenor} bulan</span></div>
+              <div className="flex justify-between"><span className="text-navy-300">Angsuran / Bulan</span><span className="text-accent-400 font-bold">{formatRupiah(detailItem.angsuranPerBulan)}</span></div>
+            </div>
+            <div className="border-t border-navy-700/50 pt-3 mt-3 flex justify-between">
+              <span className="text-navy-400">Status</span>
+              <span className={`font-medium ${detailItem.status === "lancar" ? "text-success-400" : detailItem.status === "kurang_lancar" ? "text-warning-400" : "text-danger-400"}`}>
+                {detailItem.status === "lancar" ? "Lancar" : detailItem.status === "kurang_lancar" ? "Kurang Lancar" : "Macet"}
+              </span>
+            </div>
+          </>
+        )}
+      </DetailPopup>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard title="Total Disalurkan" value={formatRupiah(totalDisalurkan)} icon={Banknote} color="blue" />
         <StatCard title="Sisa Pinjaman" value={formatRupiah(totalSisa)} icon={HandCoins} color="amber" />
@@ -663,6 +700,7 @@ export default function PinjamanPage() {
                 <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3">Angsuran/bln</th>
                 <th className="text-center text-xs font-medium text-navy-400 uppercase px-5 py-3">Status</th>
                 <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Jatuh Tempo</th>
+                <th className="text-center text-xs font-medium text-navy-400 uppercase px-5 py-3">Rincian</th>
               </tr>
             </thead>
             <tbody>
@@ -693,6 +731,11 @@ export default function PinjamanPage() {
                       month: "short",
                       year: "numeric",
                     })}
+                  </td>
+                  <td className="px-5 py-3 text-center">
+                    <button type="button" onClick={() => setDetailItem(p)} className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-accent-500/15 text-accent-400 hover:bg-accent-500/25 transition-colors cursor-pointer">
+                      <Eye className="w-3.5 h-3.5" /> Detail
+                    </button>
                   </td>
                 </tr>
               ))}

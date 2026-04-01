@@ -7,6 +7,7 @@ import {
   Users,
   Calculator,
   Loader2,
+  Eye,
 } from "lucide-react";
 import {
   PieChart,
@@ -24,12 +25,19 @@ import StatCard from "./StatCard";
 import { formatRupiah, getTierColor, getTierLabel } from "@/data/mock";
 import type { Anggota } from "@/data/mock";
 import { fetchAnggota } from "@/lib/fetchers";
+import DetailPopup from "./DetailPopup";
 
 const distribusiColors = ["#3b82f6", "#22c55e", "#f59e0b", "#a855f7", "#ec4899"];
+
+interface SHUAnggota extends Anggota {
+  totalSimpanan: number;
+  estimasiSHU: number;
+}
 
 export default function SHUPage() {
   const [anggotaList, setAnggotaList] = useState<Anggota[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detailItem, setDetailItem] = useState<SHUAnggota | null>(null);
 
   useEffect(() => {
     fetchAnggota()
@@ -79,6 +87,44 @@ export default function SHUPage() {
 
   return (
     <div className="space-y-6">
+      <DetailPopup
+        open={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        title="Rincian SHU Anggota"
+        filename={`shu-${detailItem?.nama?.replace(/\s+/g, "_") || "detail"}`}
+      >
+        {detailItem && (
+          <>
+            <h3 className="text-base font-bold text-white text-center mb-1">RINCIAN ESTIMASI SHU</h3>
+            <p className="text-xs text-navy-400 text-center mb-4">PRIMKOPPOL RESOR SUBANG</p>
+            <div className="border-t border-navy-700/50 pt-3 space-y-2">
+              <div className="flex justify-between"><span className="text-navy-400">Nama Anggota</span><span className="font-medium">{detailItem.nama}</span></div>
+              <div className="flex justify-between"><span className="text-navy-400">No. Anggota</span><span>{detailItem.nomorAnggota}</span></div>
+              <div className="flex justify-between"><span className="text-navy-400">Satuan</span><span>{detailItem.satuan}</span></div>
+              <div className="flex justify-between"><span className="text-navy-400">Tier</span><span>{getTierLabel(detailItem.tier)}</span></div>
+              <div className="flex justify-between"><span className="text-navy-400">Skor</span><span className="font-bold">{detailItem.skor}</span></div>
+            </div>
+            <div className="border-t border-navy-700/50 pt-3 mt-3 space-y-2">
+              <h4 className="text-xs font-semibold text-navy-400 uppercase">Detail Simpanan</h4>
+              <div className="flex justify-between"><span className="text-navy-300">Simpanan Pokok</span><span className="text-white">{formatRupiah(detailItem.simpananPokok)}</span></div>
+              <div className="flex justify-between"><span className="text-navy-300">Simpanan Wajib</span><span className="text-white">{formatRupiah(detailItem.simpananWajib)}</span></div>
+              <div className="flex justify-between"><span className="text-navy-300">Simpanan Sukarela</span><span className="text-white">{formatRupiah(detailItem.simpananSukarela)}</span></div>
+              <div className="flex justify-between border-t border-navy-700/50 pt-2"><span className="text-navy-300 font-medium">Total Simpanan</span><span className="text-white font-medium">{formatRupiah(detailItem.totalSimpanan)}</span></div>
+            </div>
+            <div className="border-t border-navy-700/50 pt-3 mt-3 space-y-2">
+              <h4 className="text-xs font-semibold text-navy-400 uppercase">Perhitungan SHU</h4>
+              <div className="flex justify-between text-xs"><span className="text-navy-400">Faktor Simpanan</span><span className="text-navy-300">{(detailItem.totalSimpanan / 1000000).toFixed(2)}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-navy-400">Faktor Skor</span><span className="text-navy-300">{(detailItem.skor / 100).toFixed(2)}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-navy-400">Konstanta</span><span className="text-navy-300">Rp 250.000</span></div>
+            </div>
+            <div className="border-t-2 border-navy-600 pt-3 mt-3 flex justify-between">
+              <span className="font-bold text-white">ESTIMASI SHU</span>
+              <span className="font-bold text-accent-400">{formatRupiah(detailItem.estimasiSHU)}</span>
+            </div>
+          </>
+        )}
+      </DetailPopup>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard title="Estimasi Total SHU" value={formatRupiah(estimasiTotalSHU)} subtitle="Tahun berjalan" icon={PieChartIcon} color="blue" />
         <StatCard title="Total Simpanan" value={formatRupiah(totalSimpanan)} icon={TrendingUp} color="green" />
@@ -164,6 +210,7 @@ export default function SHUPage() {
                 <th className="text-center text-xs font-medium text-navy-400 uppercase px-5 py-3">Skor</th>
                 <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3">Total Simpanan</th>
                 <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3">Estimasi SHU</th>
+                <th className="text-center text-xs font-medium text-navy-400 uppercase px-5 py-3">Rincian</th>
               </tr>
             </thead>
             <tbody>
@@ -186,6 +233,11 @@ export default function SHUPage() {
                   </td>
                   <td className="px-5 py-3 text-sm text-white text-right">{formatRupiah(a.totalSimpanan)}</td>
                   <td className="px-5 py-3 text-sm font-bold text-accent-400 text-right">{formatRupiah(a.estimasiSHU)}</td>
+                  <td className="px-5 py-3 text-center">
+                    <button type="button" onClick={() => setDetailItem(a)} className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-accent-500/15 text-accent-400 hover:bg-accent-500/25 transition-colors cursor-pointer">
+                      <Eye className="w-3.5 h-3.5" /> Detail
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -195,6 +247,7 @@ export default function SHUPage() {
                 <td className="px-5 py-3 text-sm font-bold text-accent-400 text-right">
                   {formatRupiah(shuPerAnggota.reduce((s, a) => s + a.estimasiSHU, 0))}
                 </td>
+                <td></td>
               </tr>
             </tfoot>
           </table>

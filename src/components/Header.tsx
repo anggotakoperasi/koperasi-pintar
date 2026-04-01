@@ -24,7 +24,9 @@ export default function Header({
   onSearchSelect,
 }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -80,6 +82,9 @@ export default function Header({
       const target = e.target as Node;
       if (profileRef.current && !profileRef.current.contains(target)) {
         setProfileOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(target)) {
+        setNotifOpen(false);
       }
       if (searchWrapRef.current && !searchWrapRef.current.contains(target)) {
         setSearchDropdownOpen(false);
@@ -211,13 +216,38 @@ export default function Header({
           )}
         </div>
 
-        <button
-          type="button"
-          className="relative p-2 rounded-xl hover:bg-navy-800 transition-colors cursor-pointer"
-        >
-          <Bell className="w-5 h-5 text-navy-300" />
-          <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-danger-500 rounded-full border-2 border-navy-950" />
-        </button>
+        <div className="relative" ref={notifRef}>
+          <button
+            type="button"
+            onClick={() => setNotifOpen(!notifOpen)}
+            className="relative p-2 rounded-xl hover:bg-navy-800 transition-colors cursor-pointer"
+          >
+            <Bell className="w-5 h-5 text-navy-300" />
+            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-danger-500 rounded-full border-2 border-navy-950" />
+          </button>
+          {notifOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 bg-navy-800 border border-navy-600/50 rounded-2xl shadow-2xl overflow-hidden z-50">
+              <div className="px-4 py-3 border-b border-navy-700/50 flex items-center justify-between">
+                <p className="text-sm font-semibold text-white">Notifikasi</p>
+                <span className="text-xs font-medium text-accent-400 bg-accent-500/15 px-2 py-0.5 rounded-full">3 baru</span>
+              </div>
+              <ul className="max-h-72 overflow-y-auto divide-y divide-navy-700/40">
+                {[
+                  { msg: "Pinjaman baru diajukan oleh BRIPKA AHMAD SURYANA", time: "5 menit lalu", unread: true },
+                  { msg: "Setoran simpanan wajib berhasil diproses", time: "1 jam lalu", unread: true },
+                  { msg: "Potongan bulan Maret 2026 telah dikirim", time: "3 jam lalu", unread: true },
+                  { msg: "Backup otomatis berhasil dilakukan", time: "1 hari lalu", unread: false },
+                  { msg: "Anggota baru terdaftar: BRIPTU HENDRA", time: "2 hari lalu", unread: false },
+                ].map((n, i) => (
+                  <li key={i} className={`px-4 py-3 text-sm ${n.unread ? "bg-accent-500/5" : ""}`}>
+                    <p className={`${n.unread ? "text-white font-medium" : "text-navy-300"}`}>{n.msg}</p>
+                    <p className="text-xs text-navy-500 mt-1">{n.time}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
 
         <div className="relative pl-2 lg:pl-4 border-l border-navy-700/50" ref={profileRef}>
           <button

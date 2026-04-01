@@ -10,6 +10,7 @@ import {
   TrendingUp,
   Loader2,
   X,
+  Eye,
 } from "lucide-react";
 import StatCard from "./StatCard";
 import { formatRupiah } from "@/data/mock";
@@ -19,6 +20,7 @@ import {
   fetchTransaksiSimpanan,
   insertTransaksiSimpanan,
 } from "@/lib/fetchers";
+import DetailPopup from "./DetailPopup";
 
 type ModalJenis = "setoran" | "pengambilan" | null;
 
@@ -51,6 +53,7 @@ export default function SimpananPage() {
   const [form, setForm] = useState(emptyForm());
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [detailItem, setDetailItem] = useState<TransaksiSimpanan | null>(null);
 
   useEffect(() => {
     Promise.all([fetchAnggota(), fetchTransaksiSimpanan()])
@@ -336,6 +339,42 @@ export default function SimpananPage() {
         </div>
       )}
 
+      <DetailPopup
+        open={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        title="Rincian Transaksi Simpanan"
+        filename={`simpanan-${detailItem?.namaAnggota?.replace(/\s+/g, "_") || "detail"}`}
+      >
+        {detailItem && (
+          <>
+            <h3 className="text-base font-bold text-white text-center mb-1">RINCIAN TRANSAKSI SIMPANAN</h3>
+            <p className="text-xs text-navy-400 text-center mb-4">PRIMKOPPOL RESOR SUBANG</p>
+            <div className="border-t border-navy-700/50 pt-3 space-y-2">
+              <div className="flex justify-between"><span className="text-navy-400">Nama Anggota</span><span className="font-medium">{detailItem.namaAnggota}</span></div>
+              <div className="flex justify-between"><span className="text-navy-400">Tanggal</span><span>{new Date(detailItem.tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span></div>
+              <div className="flex justify-between"><span className="text-navy-400">Jenis Transaksi</span>
+                <span className={detailItem.jenis === "setoran" ? "text-success-400 font-medium" : "text-warning-400 font-medium"}>
+                  {detailItem.jenis === "setoran" ? "Setoran" : "Pengambilan"}
+                </span>
+              </div>
+              <div className="flex justify-between"><span className="text-navy-400">Kategori</span><span className="capitalize">{detailItem.kategori}</span></div>
+            </div>
+            <div className="border-t-2 border-navy-600 pt-3 mt-3 flex justify-between">
+              <span className="font-bold text-white">JUMLAH</span>
+              <span className={`font-bold ${detailItem.jenis === "setoran" ? "text-success-400" : "text-warning-400"}`}>
+                {detailItem.jenis === "setoran" ? "+" : "-"}{formatRupiah(detailItem.jumlah)}
+              </span>
+            </div>
+            {detailItem.keterangan && (
+              <div className="border-t border-navy-700/50 pt-3 mt-3">
+                <span className="text-navy-400 text-xs uppercase">Keterangan</span>
+                <p className="text-white mt-1">{detailItem.keterangan}</p>
+              </div>
+            )}
+          </>
+        )}
+      </DetailPopup>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard title="Total Simpanan" value={formatRupiah(totalSimpananAll)} icon={Wallet} color="blue" />
         <StatCard title="Total Setoran" value={formatRupiah(totalSetoran)} icon={ArrowUpCircle} color="green" />
@@ -425,6 +464,7 @@ export default function SimpananPage() {
                 <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Kategori</th>
                 <th className="text-right text-xs font-medium text-navy-400 uppercase px-5 py-3">Jumlah</th>
                 <th className="text-left text-xs font-medium text-navy-400 uppercase px-5 py-3">Keterangan</th>
+                <th className="text-center text-xs font-medium text-navy-400 uppercase px-5 py-3">Rincian</th>
               </tr>
             </thead>
             <tbody>
@@ -451,6 +491,11 @@ export default function SimpananPage() {
                     {t.jenis === "setoran" ? "+" : "-"}{formatRupiah(t.jumlah)}
                   </td>
                   <td className="px-5 py-3 text-sm text-navy-400">{t.keterangan}</td>
+                  <td className="px-5 py-3 text-center">
+                    <button type="button" onClick={() => setDetailItem(t)} className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-accent-500/15 text-accent-400 hover:bg-accent-500/25 transition-colors cursor-pointer">
+                      <Eye className="w-3.5 h-3.5" /> Detail
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

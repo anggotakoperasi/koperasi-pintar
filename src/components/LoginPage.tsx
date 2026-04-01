@@ -46,7 +46,7 @@ const roles: RoleOption[] = [
 ];
 
 const demoAccounts: Record<string, { username: string; password: string; nama: string }> = {
-  super_admin: { username: "admin", password: "admin123", nama: "KOMPOL SURYADI" },
+  super_admin: { username: "admin", password: "admin123", nama: "IPTU (PURN) POL HARDOYO" },
   admin_ops: { username: "operator", password: "operator123", nama: "BRIPKA DEWI ASTUTI" },
   bendahara: { username: "bendahara", password: "bend123", nama: "IPTU SLAMET RIYADI" },
   manajer_unit: { username: "manajer", password: "manajer123", nama: "AIPDA RINA MARLINA" },
