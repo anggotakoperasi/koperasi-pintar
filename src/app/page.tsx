@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import LoginPage from "@/components/LoginPage";
 import type { UserSession } from "@/components/LoginPage";
+import type { Anggota } from "@/data/mock";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import DashboardPage from "@/components/DashboardPage";
@@ -47,6 +48,12 @@ export default function Home() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [globalSelectedAnggota, setGlobalSelectedAnggota] = useState<Anggota | null>(null);
+
+  const handleGlobalSearch = useCallback((anggota: Anggota) => {
+    setActiveMenu("anggota");
+    setGlobalSelectedAnggota(anggota);
+  }, []);
 
   useEffect(() => { setHydrated(true); }, []);
 
@@ -80,7 +87,7 @@ export default function Home() {
   const renderPage = () => {
     switch (activeMenu) {
       case "dashboard": return <DashboardPage />;
-      case "anggota": return <AnggotaPage />;
+      case "anggota": return <AnggotaPage globalSelectedAnggota={globalSelectedAnggota} onGlobalSelectedClear={() => setGlobalSelectedAnggota(null)} />;
       case "simpanan": return <SimpananPage />;
       case "pinjaman": return <PinjamanPage />;
       case "potongan": return <PotonganPage />;
@@ -110,6 +117,7 @@ export default function Home() {
           user={user}
           onMobileMenuOpen={() => setMobileMenuOpen(true)}
           onLogout={handleLogout}
+          onSearchSelect={handleGlobalSearch}
         />
         <div className="p-4 lg:p-6">{renderPage()}</div>
       </main>

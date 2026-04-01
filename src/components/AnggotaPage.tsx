@@ -82,7 +82,12 @@ const selectClass =
 const inputClass =
   "w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none";
 
-export default function AnggotaPage() {
+interface AnggotaPageProps {
+  globalSelectedAnggota?: Anggota | null;
+  onGlobalSelectedClear?: () => void;
+}
+
+export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedClear }: AnggotaPageProps = {}) {
   const [search, setSearch] = useState("");
   const [filterTier, setFilterTier] = useState<string>("semua");
   const [selectedAnggota, setSelectedAnggota] = useState<string | null>(null);
@@ -160,6 +165,13 @@ export default function AnggotaPage() {
     const t = setTimeout(() => setFeedback(null), 4000);
     return () => clearTimeout(t);
   }, [feedback]);
+
+  useEffect(() => {
+    if (globalSelectedAnggota) {
+      setDetailAnggota(globalSelectedAnggota);
+      onGlobalSelectedClear?.();
+    }
+  }, [globalSelectedAnggota, onGlobalSelectedClear]);
 
   const openAdd = () => {
     setAddForm({
