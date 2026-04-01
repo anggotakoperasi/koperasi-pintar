@@ -4,6 +4,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Koperasi Pintar - PRIMKOPPOL Resor Subang",
   description: "Sistem Manajemen Koperasi Terpadu - Simpan Pinjam Koperasi",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({

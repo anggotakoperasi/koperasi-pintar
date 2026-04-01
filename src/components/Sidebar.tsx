@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   LayoutDashboard,
   Users,
@@ -12,7 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Shield,
   X,
 } from "lucide-react";
 
@@ -75,8 +75,8 @@ export default function Sidebar({
         `}
       >
         <div className="flex items-center gap-3 px-4 h-[72px] border-b border-navy-700/50">
-          <div className="w-10 h-10 rounded-xl bg-accent-500 flex items-center justify-center flex-shrink-0">
-            <Shield className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-white">
+            <Image src="/logo.png" alt="Logo PRIMKOPPOL" width={40} height={40} className="w-full h-full object-cover" priority />
           </div>
           <div className="overflow-hidden lg:hidden">
             <h1 className="text-base font-bold text-white leading-tight">Koperasi Pintar</h1>
