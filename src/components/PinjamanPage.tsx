@@ -56,7 +56,7 @@ function todayIso(): string {
   return `${yy}-${mm}-${dd}`;
 }
 
-/** Cicilan bulanan: anuitas dengan bunga bulanan (decimal r = %/100). */
+/** Cicilan bulanan: flat rate (pokok/tenor + pokok*bunga%). */
 function hitungAngsuranPerBulan(
   pokok: number,
   bungaPerBulanPct: number,
@@ -64,11 +64,9 @@ function hitungAngsuranPerBulan(
 ): number {
   if (!tenorBulan || tenorBulan < 1) return 0;
   if (!pokok || pokok <= 0) return 0;
-  const r = bungaPerBulanPct / 100;
-  if (r <= 0) return pokok / tenorBulan;
-  const pow = Math.pow(1 + r, tenorBulan);
-  const pmt = (pokok * r * pow) / (pow - 1);
-  return Math.round(pmt);
+  const angsuranPokok = pokok / tenorBulan;
+  const bungaPerBulan = pokok * (bungaPerBulanPct / 100);
+  return Math.round(angsuranPokok + bungaPerBulan);
 }
 
 export default function PinjamanPage() {
