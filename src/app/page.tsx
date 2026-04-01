@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LoginPage from "@/components/LoginPage";
 import type { UserSession } from "@/components/LoginPage";
 import Sidebar from "@/components/Sidebar";
@@ -14,6 +14,22 @@ import SHUPage from "@/components/SHUPage";
 import LaporanPage from "@/components/LaporanPage";
 import PengaturanPage from "@/components/PengaturanPage";
 
+const SESSION_KEY = "koperasi_session";
+const MENU_KEY = "koperasi_menu";
+
+function loadSession(): UserSession | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function loadMenu(): string {
+  if (typeof window === "undefined") return "dashboard";
+  return localStorage.getItem(MENU_KEY) || "dashboard";
+}
+
 const pageConfig: Record<string, { title: string; subtitle: string }> = {
   dashboard: { title: "Dashboard", subtitle: "Ringkasan data koperasi secara real-time" },
   anggota: { title: "Data Anggota", subtitle: "Kelola data anggota koperasi" },
@@ -26,10 +42,27 @@ const pageConfig: Record<string, { title: string; subtitle: string }> = {
 };
 
 export default function Home() {
-  const [user, setUser] = useState<UserSession | null>(null);
-  const [activeMenu, setActiveMenu] = useState("dashboard");
+  const [user, setUser] = useState<UserSession | null>(loadSession);
+  const [activeMenu, setActiveMenu] = useState(loadMenu);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => { setHydrated(true); }, []);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem(MENU_KEY, activeMenu);
+  }, [activeMenu]);
+
+  if (!hydrated) return null;
 
   if (!user) {
     return <LoginPage onLogin={(session) => setUser(session)} />;
@@ -40,6 +73,8 @@ export default function Home() {
   const handleLogout = () => {
     setUser(null);
     setActiveMenu("dashboard");
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(MENU_KEY);
   };
 
   const renderPage = () => {
