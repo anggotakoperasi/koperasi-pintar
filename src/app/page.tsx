@@ -37,6 +37,11 @@ const pageConfig: Record<string, { title: string; subtitle: string }> = {
   simpanan: { title: "Simpanan", subtitle: "Setoran & pengambilan simpanan anggota" },
   pinjaman: { title: "Pinjaman", subtitle: "Manajemen pinjaman & angsuran" },
   potongan: { title: "Daftar Potongan", subtitle: "Potongan gaji untuk simpanan & angsuran" },
+  potongan_cetak: { title: "Pencetakan Daftar Potongan", subtitle: "Cetak daftar potongan per periode" },
+  potongan_struk: { title: "Pencetakan Struk Potongan", subtitle: "Cetak struk potongan individual" },
+  potongan_rekap: { title: "Rekap Daftar Potongan", subtitle: "Rekapitulasi data potongan anggota" },
+  potongan_koreksi: { title: "Koreksi Daftar Potongan", subtitle: "Koreksi dan penyesuaian data potongan" },
+  potongan_rekapitulasi: { title: "Daftar Potongan (Rekapitulasi)", subtitle: "Rekapitulasi lengkap potongan" },
   shu: { title: "SHU", subtitle: "Sisa Hasil Usaha & distribusi" },
   laporan: { title: "Laporan & Pencetakan", subtitle: "Cetak dan export laporan koperasi" },
   pengaturan: { title: "Pengaturan", subtitle: "Konfigurasi sistem dan data master" },
@@ -90,7 +95,13 @@ export default function Home() {
       case "anggota": return <AnggotaPage globalSelectedAnggota={globalSelectedAnggota} onGlobalSelectedClear={() => setGlobalSelectedAnggota(null)} />;
       case "simpanan": return <SimpananPage />;
       case "pinjaman": return <PinjamanPage />;
-      case "potongan": return <PotonganPage />;
+      case "potongan":
+      case "potongan_cetak":
+      case "potongan_struk":
+      case "potongan_rekap":
+      case "potongan_koreksi":
+      case "potongan_rekapitulasi":
+        return <PotonganPage activeTab={activeMenu} />;
       case "shu": return <SHUPage />;
       case "laporan": return <LaporanPage />;
       case "pengaturan": return <PengaturanPage />;

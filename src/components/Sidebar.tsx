@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import {
   LayoutDashboard,
@@ -12,9 +13,28 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   LogOut,
   X,
+  Printer,
+  FileCheck,
+  ClipboardList,
+  PenLine,
+  ListChecks,
 } from "lucide-react";
+
+interface SubMenuItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children?: SubMenuItem[];
+}
 
 interface SidebarProps {
   activeMenu: string;
@@ -26,12 +46,22 @@ interface SidebarProps {
   onMobileClose: () => void;
 }
 
-const menuItems = [
+const menuItems: MenuItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "anggota", label: "Data Anggota", icon: Users },
   { id: "simpanan", label: "Simpanan", icon: Wallet },
   { id: "pinjaman", label: "Pinjaman", icon: HandCoins },
-  { id: "potongan", label: "Daftar Potongan", icon: Receipt },
+  {
+    id: "potongan", label: "Daftar Potongan", icon: Receipt,
+    children: [
+      { id: "potongan", label: "Daftar Potongan", icon: ListChecks },
+      { id: "potongan_cetak", label: "Pencetakan Daftar Potongan", icon: Printer },
+      { id: "potongan_struk", label: "Pencetakan Struk Potongan", icon: FileCheck },
+      { id: "potongan_rekap", label: "Rekap Daftar Potongan", icon: ClipboardList },
+      { id: "potongan_koreksi", label: "Koreksi Daftar Potongan", icon: PenLine },
+      { id: "potongan_rekapitulasi", label: "Daftar Potongan (Rekapitulasi)", icon: FileText },
+    ],
+  },
   { id: "shu", label: "SHU", icon: PieChart },
   { id: "laporan", label: "Laporan", icon: FileText },
   { id: "pengaturan", label: "Pengaturan", icon: Settings },
@@ -46,9 +76,15 @@ export default function Sidebar({
   mobileOpen,
   onMobileClose,
 }: SidebarProps) {
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({ potongan: activeMenu.startsWith("potongan") });
+
   const handleMenuClick = (id: string) => {
     onMenuChange(id);
     onMobileClose();
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpandedMenus((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   return (
@@ -100,20 +136,97 @@ export default function Sidebar({
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeMenu === item.id;
+            const hasChildren = !!item.children;
+            const isParentActive = hasChildren
+              ? activeMenu.startsWith(item.id)
+              : activeMenu === item.id;
+            const isExpanded = expandedMenus[item.id];
+
+            if (hasChildren) {
+              return (
+                <div key={item.id}>
+                  <button
+                    onClick={() => {
+                      toggleExpand(item.id);
+                      if (!isExpanded && !activeMenu.startsWith(item.id)) {
+                        handleMenuClick(item.id);
+                      }
+                    }}
+                    title={collapsed ? item.label : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] font-medium transition-all duration-200 cursor-pointer ${
+                      isParentActive
+                        ? "bg-accent-500/15 text-accent-400 shadow-lg shadow-accent-500/5"
+                        : "text-navy-300 hover:bg-navy-800 hover:text-white"
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 flex-shrink-0 ${isParentActive ? "text-accent-400" : ""}`} />
+                    <span className="lg:hidden flex-1 text-left">{item.label}</span>
+                    {!collapsed && <span className="hidden lg:inline flex-1 text-left">{item.label}</span>}
+                    {!collapsed && (
+                      <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 hidden lg:block ${isExpanded ? "rotate-180" : ""}`} />
+                    )}
+                    <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 lg:hidden ${isExpanded ? "rotate-180" : ""}`} />
+                  </button>
+                  {isExpanded && !collapsed && (
+                    <div className="mt-1 ml-4 pl-3 border-l border-navy-700/50 space-y-0.5 hidden lg:block">
+                      {item.children!.map((sub) => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = activeMenu === sub.id;
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => handleMenuClick(sub.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 cursor-pointer ${
+                              isSubActive
+                                ? "bg-accent-500/10 text-accent-400"
+                                : "text-navy-400 hover:bg-navy-800/60 hover:text-white"
+                            }`}
+                          >
+                            <SubIcon className={`w-4 h-4 flex-shrink-0 ${isSubActive ? "text-accent-400" : ""}`} />
+                            <span className="truncate">{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {isExpanded && (
+                    <div className="mt-1 ml-4 pl-3 border-l border-navy-700/50 space-y-0.5 lg:hidden">
+                      {item.children!.map((sub) => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = activeMenu === sub.id;
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => handleMenuClick(sub.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 cursor-pointer ${
+                              isSubActive
+                                ? "bg-accent-500/10 text-accent-400"
+                                : "text-navy-400 hover:bg-navy-800/60 hover:text-white"
+                            }`}
+                          >
+                            <SubIcon className={`w-4 h-4 flex-shrink-0 ${isSubActive ? "text-accent-400" : ""}`} />
+                            <span>{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <button
                 key={item.id}
                 onClick={() => handleMenuClick(item.id)}
                 title={collapsed ? item.label : undefined}
                 className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] font-medium transition-all duration-200 cursor-pointer ${
-                  isActive
+                  isParentActive
                     ? "bg-accent-500/15 text-accent-400 shadow-lg shadow-accent-500/5"
                     : "text-navy-300 hover:bg-navy-800 hover:text-white"
                 }`}
               >
-                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-accent-400" : ""}`} />
-                {/* Mobile: always show label. Desktop: respect collapse */}
+                <Icon className={`w-5 h-5 flex-shrink-0 ${isParentActive ? "text-accent-400" : ""}`} />
                 <span className="lg:hidden">{item.label}</span>
                 {!collapsed && <span className="hidden lg:inline">{item.label}</span>}
               </button>
