@@ -18,6 +18,8 @@ import {
   Edit3,
   AlertTriangle,
   Shield,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 const SETTINGS_KEY = "koperasi_pengaturan";
@@ -311,24 +313,34 @@ export default function PengaturanPage() {
             {activeModal === "kode_pinjaman" && (
               <>
                 {kodePinjaman.map((kp, i) => (
-                  <div key={i} className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-xs text-navy-400 mb-1">Kode</label>
-                      <input value={kp.kode} onChange={(e) => { const copy = [...kodePinjaman]; copy[i] = { ...kp, kode: e.target.value }; setKodePinjaman(copy); }} className={inputCls} />
+                  <div key={i} className="flex items-end gap-2">
+                    <div className="flex-1 grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs text-navy-400 mb-1">Kode</label>
+                        <input value={kp.kode} onChange={(e) => { const copy = [...kodePinjaman]; copy[i] = { ...kp, kode: e.target.value }; setKodePinjaman(copy); }} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-navy-400 mb-1">Nama</label>
+                        <input value={kp.nama} onChange={(e) => { const copy = [...kodePinjaman]; copy[i] = { ...kp, nama: e.target.value }; setKodePinjaman(copy); }} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-navy-400 mb-1">Bunga (%)</label>
+                        <input value={kp.bunga} onChange={(e) => { const copy = [...kodePinjaman]; copy[i] = { ...kp, bunga: e.target.value }; setKodePinjaman(copy); }} className={inputCls} />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs text-navy-400 mb-1">Nama</label>
-                      <input value={kp.nama} onChange={(e) => { const copy = [...kodePinjaman]; copy[i] = { ...kp, nama: e.target.value }; setKodePinjaman(copy); }} className={inputCls} />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-navy-400 mb-1">Bunga (%)</label>
-                      <input value={kp.bunga} onChange={(e) => { const copy = [...kodePinjaman]; copy[i] = { ...kp, bunga: e.target.value }; setKodePinjaman(copy); }} className={inputCls} />
-                    </div>
+                    <button type="button" onClick={() => { if (kodePinjaman.length > 1) setKodePinjaman(kodePinjaman.filter((_, j) => j !== i)); }} disabled={kodePinjaman.length <= 1} className="mb-0.5 p-2 rounded-lg bg-danger-600/20 text-danger-400 hover:bg-danger-600/30 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" title="Hapus baris">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
-                <button type="button" disabled={saving} onClick={() => saveWithPersist("Kode pinjaman berhasil disimpan!")} className={btnPrimary}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
-                </button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setKodePinjaman([...kodePinjaman, { kode: "", nama: "", bunga: "1.0" }])} className="flex items-center gap-2 bg-navy-700 hover:bg-navy-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
+                    <Plus className="w-4 h-4" /> Tambah Baris
+                  </button>
+                  <button type="button" disabled={saving} onClick={() => saveWithPersist("Kode pinjaman berhasil disimpan!")} className={btnPrimary}>
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
+                  </button>
+                </div>
               </>
             )}
             {activeModal === "kode_simpanan" && (
