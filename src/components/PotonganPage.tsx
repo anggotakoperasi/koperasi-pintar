@@ -44,9 +44,22 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   const [loading, setLoading] = useState(true);
   const [detailItem, setDetailItem] = useState<Potongan | null>(null);
   const [koreksiItem, setKoreksiItem] = useState<Potongan | null>(null);
-  const [koreksiForm, setKoreksiForm] = useState({ simpananWajib: "", angsuranPinjaman: "", jasaPinjaman: "", catatan: "" });
   const [koreksiSaved, setKoreksiSaved] = useState(false);
   const [koreksiSearch, setKoreksiSearch] = useState("");
+  const [koreksiTab, setKoreksiTab] = useState<"simpanan" | "pinjaman">("simpanan");
+  const [simpananRows, setSimpananRows] = useState([
+    { kode: "PO", jenis: "Pokok", saldo: 0, potongan: "", persen: "0" },
+    { kode: "WA", jenis: "Wajib", saldo: 0, potongan: "", persen: "0" },
+    { kode: "SS", jenis: "Sukarela", saldo: 0, potongan: "", persen: "0" },
+    { kode: "LL", jenis: "Lain-lain", saldo: 0, potongan: "", persen: "0" },
+    { kode: "SH", jenis: "SHU", saldo: 0, potongan: "", persen: "0" },
+  ]);
+  const [pinjamanRows, setPinjamanRows] = useState([
+    { kode: "BJ", keterangan: "BANK BJB", noRek: "BJB", tglPot: "1", pokok: "", jasa: "", deskripsi: "PINJAMAN BARU" },
+    { kode: "SD", keterangan: "SANDANG", noRek: "1A", tglPot: "1", pokok: "", jasa: "", deskripsi: "KEWENANGAN" },
+    { kode: "SP", keterangan: "UANG", noRek: "SP1", tglPot: "1", pokok: "", jasa: "", deskripsi: "BARU" },
+    { kode: "SP", keterangan: "UANG", noRek: "SP2", tglPot: "1", pokok: "", jasa: "", deskripsi: "BARU" },
+  ]);
 
   useEffect(() => {
     fetchPotongan()
@@ -70,24 +83,37 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
 
   const openKoreksi = (p: Potongan) => {
     setKoreksiItem(p);
-    setKoreksiForm({
-      simpananWajib: String(p.simpananWajib),
-      angsuranPinjaman: String(p.angsuranPinjaman),
-      jasaPinjaman: String(p.jasaPinjaman),
-      catatan: "",
-    });
+    setKoreksiTab("simpanan");
+    setSimpananRows([
+      { kode: "PO", jenis: "Pokok", saldo: 5000, potongan: "0", persen: "0" },
+      { kode: "WA", jenis: "Wajib", saldo: p.simpananWajib, potongan: String(p.simpananWajib), persen: "0" },
+      { kode: "SS", jenis: "Sukarela", saldo: 0, potongan: "0", persen: "0" },
+      { kode: "LL", jenis: "Lain-lain", saldo: 0, potongan: "0", persen: "0" },
+      { kode: "SH", jenis: "SHU", saldo: 0, potongan: "0", persen: "0" },
+    ]);
+    setPinjamanRows([
+      { kode: "BJ", keterangan: "BANK BJB", noRek: "BJB", tglPot: "1", pokok: String(p.angsuranPinjaman), jasa: String(p.jasaPinjaman), deskripsi: "PINJAMAN BARU" },
+      { kode: "SD", keterangan: "SANDANG", noRek: "1A", tglPot: "1", pokok: "0", jasa: "0", deskripsi: "KEWENANGAN" },
+      { kode: "SP", keterangan: "UANG", noRek: "SP1", tglPot: "1", pokok: "0", jasa: "0", deskripsi: "BARU" },
+      { kode: "SP", keterangan: "UANG", noRek: "SP2", tglPot: "1", pokok: "0", jasa: "0", deskripsi: "BARU" },
+    ]);
     setKoreksiSaved(false);
   };
 
+  const totalSimpanan = simpananRows.reduce((s, r) => s + r.saldo, 0);
+  const totalPotonganSimpanan = simpananRows.reduce((s, r) => s + (Number(r.potongan) || 0), 0);
+  const totalPokokPinjaman = pinjamanRows.reduce((s, r) => s + (Number(r.pokok) || 0), 0);
+  const totalJasaPinjaman = pinjamanRows.reduce((s, r) => s + (Number(r.jasa) || 0), 0);
+
   const saveKoreksi = () => {
     if (!koreksiItem) return;
-    const newSimpWajib = Number(koreksiForm.simpananWajib) || 0;
-    const newAngsuran = Number(koreksiForm.angsuranPinjaman) || 0;
-    const newJasa = Number(koreksiForm.jasaPinjaman) || 0;
+    const newSimpWajib = Number(simpananRows.find((r) => r.kode === "WA")?.potongan) || 0;
+    const newAngsuran = totalPokokPinjaman;
+    const newJasa = totalJasaPinjaman;
     setPotonganList((prev) =>
       prev.map((p) =>
         p.id === koreksiItem.id
-          ? { ...p, simpananWajib: newSimpWajib, angsuranPinjaman: newAngsuran, jasaPinjaman: newJasa, totalPotongan: newSimpWajib + newAngsuran + newJasa }
+          ? { ...p, simpananWajib: newSimpWajib, angsuranPinjaman: newAngsuran, jasaPinjaman: newJasa, totalPotongan: totalPotonganSimpanan + newAngsuran + newJasa }
           : p
       )
     );
@@ -319,7 +345,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
 
         {koreksiItem && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setKoreksiItem(null); setKoreksiSaved(false); }}>
-            <div className="bg-navy-900 border border-navy-700/50 rounded-2xl w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-navy-900 border border-navy-700/50 rounded-2xl w-full max-w-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
               <h3 className="text-lg font-bold text-white mb-1">Koreksi Potongan</h3>
               <p className="text-xs text-navy-400 mb-4">{koreksiItem.namaAnggota} — {koreksiItem.bulan}</p>
 
@@ -327,39 +353,97 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
                 <div className="text-center py-6">
                   <CheckCircle2 className="w-12 h-12 text-success-400 mx-auto mb-3" />
                   <p className="text-sm font-medium text-success-400 mb-1">Koreksi berhasil disimpan!</p>
-                  <p className="text-xs text-navy-400 mb-4">Total baru: {formatRupiah((Number(koreksiForm.simpananWajib) || 0) + (Number(koreksiForm.angsuranPinjaman) || 0) + (Number(koreksiForm.jasaPinjaman) || 0))}</p>
+                  <p className="text-xs text-navy-400 mb-4">Total Potongan Simpanan: {formatRupiah(totalPotonganSimpanan)} | Potongan Pokok: {formatRupiah(totalPokokPinjaman)} | Potongan Jasa: {formatRupiah(totalJasaPinjaman)}</p>
                   <button type="button" onClick={() => { setKoreksiItem(null); setKoreksiSaved(false); }} className="bg-accent-500 hover:bg-accent-600 text-white px-5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer">Tutup</button>
                 </div>
               ) : (
                 <>
-                  <div className="space-y-3 mb-4">
-                    <div>
-                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1">Simpanan Wajib</label>
-                      <input type="number" value={koreksiForm.simpananWajib} onChange={(e) => setKoreksiForm((f) => ({ ...f, simpananWajib: e.target.value }))} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
-                      <p className="text-[11px] text-navy-500 mt-0.5">Sebelumnya: {formatRupiah(koreksiItem.simpananWajib)}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1">Angsuran Pinjaman</label>
-                      <input type="number" value={koreksiForm.angsuranPinjaman} onChange={(e) => setKoreksiForm((f) => ({ ...f, angsuranPinjaman: e.target.value }))} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
-                      <p className="text-[11px] text-navy-500 mt-0.5">Sebelumnya: {formatRupiah(koreksiItem.angsuranPinjaman)}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1">Jasa Pinjaman</label>
-                      <input type="number" value={koreksiForm.jasaPinjaman} onChange={(e) => setKoreksiForm((f) => ({ ...f, jasaPinjaman: e.target.value }))} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
-                      <p className="text-[11px] text-navy-500 mt-0.5">Sebelumnya: {formatRupiah(koreksiItem.jasaPinjaman)}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1">Catatan Koreksi</label>
-                      <textarea value={koreksiForm.catatan} onChange={(e) => setKoreksiForm((f) => ({ ...f, catatan: e.target.value }))} placeholder="Alasan koreksi..." rows={2} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none resize-none" />
-                    </div>
+                  <div className="flex gap-2 mb-4">
+                    <button type="button" onClick={() => setKoreksiTab("simpanan")} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${koreksiTab === "simpanan" ? "bg-accent-500 text-white" : "bg-navy-800 text-navy-300 hover:bg-navy-700"}`}>Koreksi Simpanan</button>
+                    <button type="button" onClick={() => setKoreksiTab("pinjaman")} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${koreksiTab === "pinjaman" ? "bg-accent-500 text-white" : "bg-navy-800 text-navy-300 hover:bg-navy-700"}`}>Koreksi Pinjaman</button>
                   </div>
-                  <div className="border-t border-navy-700/50 pt-3 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-navy-400">Total Baru</span>
-                      <span className="font-bold text-accent-400">{formatRupiah((Number(koreksiForm.simpananWajib) || 0) + (Number(koreksiForm.angsuranPinjaman) || 0) + (Number(koreksiForm.jasaPinjaman) || 0))}</span>
+
+                  {koreksiTab === "simpanan" && (
+                    <div>
+                      <h4 className="text-sm font-bold text-accent-400 mb-3 uppercase tracking-wide">[ Simpanan ]</h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-navy-800/80">
+                            <tr className="border-b border-navy-600/40">
+                              <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Kode</th>
+                              <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Jenis</th>
+                              <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Saldo Simpanan</th>
+                              <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Potongan Bulan Ini</th>
+                              <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">% Jasa/Tahun</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {simpananRows.map((row, i) => (
+                              <tr key={row.kode} className="border-b border-navy-800/50">
+                                <td className="px-3 py-2 text-sm font-mono font-bold text-warning-400">{row.kode}</td>
+                                <td className="px-3 py-2 text-sm text-white">{row.jenis}</td>
+                                <td className="px-3 py-2 text-sm text-white text-right">{formatRupiah(row.saldo)}</td>
+                                <td className="px-3 py-2 text-right">
+                                  <input type="number" value={row.potongan} onChange={(e) => { const v = e.target.value; setSimpananRows((prev) => prev.map((r, j) => j === i ? { ...r, potongan: v } : r)); }} className="w-28 bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white text-right outline-none focus:border-accent-500" />
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <input type="text" value={row.persen} onChange={(e) => { const v = e.target.value; setSimpananRows((prev) => prev.map((r, j) => j === i ? { ...r, persen: v } : r)); }} className="w-16 bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white text-right outline-none focus:border-accent-500" />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="mt-3 flex justify-between items-center border-t-2 border-navy-600 pt-3">
+                        <div className="text-sm"><span className="text-navy-400">Total Simpanan:</span> <span className="font-bold text-white ml-2">{formatRupiah(totalSimpanan)}</span></div>
+                        <div className="text-sm"><span className="text-navy-400">Total Potongan:</span> <span className="font-bold text-accent-400 ml-2">{formatRupiah(totalPotonganSimpanan)}</span></div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
+                  )}
+
+                  {koreksiTab === "pinjaman" && (
+                    <div>
+                      <h4 className="text-sm font-bold text-success-400 mb-3 uppercase tracking-wide">[ Pinjaman ]</h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-navy-800/80">
+                            <tr className="border-b border-navy-600/40">
+                              <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Kd</th>
+                              <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Keterangan</th>
+                              <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">No-Rek</th>
+                              <th className="text-center text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Tgl-Pot</th>
+                              <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Pot. Pokok</th>
+                              <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Pot. Jasa</th>
+                              <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Deskripsi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pinjamanRows.map((row, i) => (
+                              <tr key={`${row.kode}-${row.noRek}`} className="border-b border-navy-800/50">
+                                <td className="px-3 py-2 text-sm font-mono font-bold text-success-400">{row.kode}</td>
+                                <td className="px-3 py-2 text-sm text-white">{row.keterangan}</td>
+                                <td className="px-3 py-2 text-sm text-navy-300">{row.noRek}</td>
+                                <td className="px-3 py-2 text-sm text-navy-300 text-center">{row.tglPot}</td>
+                                <td className="px-3 py-2 text-right">
+                                  <input type="number" value={row.pokok} onChange={(e) => { const v = e.target.value; setPinjamanRows((prev) => prev.map((r, j) => j === i ? { ...r, pokok: v } : r)); }} className="w-24 bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white text-right outline-none focus:border-accent-500" />
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                  <input type="number" value={row.jasa} onChange={(e) => { const v = e.target.value; setPinjamanRows((prev) => prev.map((r, j) => j === i ? { ...r, jasa: v } : r)); }} className="w-24 bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white text-right outline-none focus:border-accent-500" />
+                                </td>
+                                <td className="px-3 py-2 text-sm font-bold text-white">{row.deskripsi}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="mt-3 flex justify-between items-center border-t-2 border-navy-600 pt-3">
+                        <div className="text-sm"><span className="text-navy-400">Potongan Pokok:</span> <span className="font-bold text-white ml-2">{formatRupiah(totalPokokPinjaman)}</span></div>
+                        <div className="text-sm"><span className="text-navy-400">Potongan Jasa:</span> <span className="font-bold text-accent-400 ml-2">{formatRupiah(totalJasaPinjaman)}</span></div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 mt-6">
                     <button type="button" onClick={() => { setKoreksiItem(null); setKoreksiSaved(false); }} className="flex-1 bg-navy-700 hover:bg-navy-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">Batal</button>
                     <button type="button" onClick={saveKoreksi} className="flex-1 flex items-center justify-center gap-2 bg-warning-500 hover:bg-warning-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
                       <Save className="w-4 h-4" /> Simpan Koreksi
