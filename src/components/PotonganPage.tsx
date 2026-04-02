@@ -43,6 +43,10 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   const [potonganList, setPotonganList] = useState<Potongan[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailItem, setDetailItem] = useState<Potongan | null>(null);
+  const [koreksiItem, setKoreksiItem] = useState<Potongan | null>(null);
+  const [koreksiForm, setKoreksiForm] = useState({ simpananWajib: "", angsuranPinjaman: "", jasaPinjaman: "", catatan: "" });
+  const [koreksiSaved, setKoreksiSaved] = useState(false);
+  const [koreksiSearch, setKoreksiSearch] = useState("");
 
   useEffect(() => {
     fetchPotongan()
@@ -50,6 +54,45 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!koreksiItem && !detailItem) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (koreksiItem) { setKoreksiItem(null); setKoreksiSaved(false); }
+        if (detailItem) setDetailItem(null);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [koreksiItem, detailItem]);
+
+  const openKoreksi = (p: Potongan) => {
+    setKoreksiItem(p);
+    setKoreksiForm({
+      simpananWajib: String(p.simpananWajib),
+      angsuranPinjaman: String(p.angsuranPinjaman),
+      jasaPinjaman: String(p.jasaPinjaman),
+      catatan: "",
+    });
+    setKoreksiSaved(false);
+  };
+
+  const saveKoreksi = () => {
+    if (!koreksiItem) return;
+    const newSimpWajib = Number(koreksiForm.simpananWajib) || 0;
+    const newAngsuran = Number(koreksiForm.angsuranPinjaman) || 0;
+    const newJasa = Number(koreksiForm.jasaPinjaman) || 0;
+    setPotonganList((prev) =>
+      prev.map((p) =>
+        p.id === koreksiItem.id
+          ? { ...p, simpananWajib: newSimpWajib, angsuranPinjaman: newAngsuran, jasaPinjaman: newJasa, totalPotongan: newSimpWajib + newAngsuran + newJasa }
+          : p
+      )
+    );
+    setKoreksiSaved(true);
+  };
 
   const rekapPerBulan = useMemo(() => {
     const map: Record<string, { bulan: string; total: number; count: number; simpWajib: number; angsuran: number; jasa: number }> = {};
@@ -234,6 +277,10 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   }
 
   if (activeTab === "potongan_koreksi") {
+    const koreksiFiltered = koreksiSearch
+      ? potonganList.filter((p) => p.namaAnggota.toLowerCase().includes(koreksiSearch.toLowerCase()))
+      : potonganList;
+
     return (
       <div className="space-y-6">
         <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 p-6">
@@ -249,23 +296,80 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
             <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Cari Anggota untuk Dikoreksi</label>
             <div className="flex items-center bg-navy-800 rounded-xl px-3 py-2.5 gap-2 border border-navy-700/50">
               <Search className="w-4 h-4 text-navy-400" />
-              <input type="text" placeholder="Ketik nama anggota..." className="bg-transparent text-sm text-white placeholder-navy-400 outline-none w-full" />
+              <input type="text" placeholder="Ketik nama anggota..." value={koreksiSearch} onChange={(e) => setKoreksiSearch(e.target.value)} className="bg-transparent text-sm text-white placeholder-navy-400 outline-none w-full" />
             </div>
           </div>
           <div className="space-y-2">
-            {potonganList.slice(0, 8).map((p) => (
+            {koreksiFiltered.slice(0, 20).map((p) => (
               <div key={p.id} className="flex items-center justify-between bg-navy-800/50 rounded-xl p-4 border border-navy-700/20">
                 <div>
                   <p className="text-sm font-medium text-white">{p.namaAnggota}</p>
                   <p className="text-xs text-navy-400">{p.bulan} — {statusLabel(p.status)} — Total: {formatRupiah(p.totalPotongan)}</p>
                 </div>
-                <button type="button" className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-warning-500/15 text-warning-400 hover:bg-warning-500/25 transition-colors cursor-pointer">
+                <button type="button" onClick={() => openKoreksi(p)} className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg bg-warning-500/15 text-warning-400 hover:bg-warning-500/25 transition-colors cursor-pointer">
                   <PenLine className="w-3.5 h-3.5" /> Koreksi
                 </button>
               </div>
             ))}
+            {koreksiFiltered.length === 0 && (
+              <p className="text-sm text-navy-400 text-center py-6">Tidak ada data ditemukan.</p>
+            )}
           </div>
         </div>
+
+        {koreksiItem && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setKoreksiItem(null); setKoreksiSaved(false); }}>
+            <div className="bg-navy-900 border border-navy-700/50 rounded-2xl w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-bold text-white mb-1">Koreksi Potongan</h3>
+              <p className="text-xs text-navy-400 mb-4">{koreksiItem.namaAnggota} — {koreksiItem.bulan}</p>
+
+              {koreksiSaved ? (
+                <div className="text-center py-6">
+                  <CheckCircle2 className="w-12 h-12 text-success-400 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-success-400 mb-1">Koreksi berhasil disimpan!</p>
+                  <p className="text-xs text-navy-400 mb-4">Total baru: {formatRupiah((Number(koreksiForm.simpananWajib) || 0) + (Number(koreksiForm.angsuranPinjaman) || 0) + (Number(koreksiForm.jasaPinjaman) || 0))}</p>
+                  <button type="button" onClick={() => { setKoreksiItem(null); setKoreksiSaved(false); }} className="bg-accent-500 hover:bg-accent-600 text-white px-5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer">Tutup</button>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-3 mb-4">
+                    <div>
+                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1">Simpanan Wajib</label>
+                      <input type="number" value={koreksiForm.simpananWajib} onChange={(e) => setKoreksiForm((f) => ({ ...f, simpananWajib: e.target.value }))} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+                      <p className="text-[11px] text-navy-500 mt-0.5">Sebelumnya: {formatRupiah(koreksiItem.simpananWajib)}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1">Angsuran Pinjaman</label>
+                      <input type="number" value={koreksiForm.angsuranPinjaman} onChange={(e) => setKoreksiForm((f) => ({ ...f, angsuranPinjaman: e.target.value }))} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+                      <p className="text-[11px] text-navy-500 mt-0.5">Sebelumnya: {formatRupiah(koreksiItem.angsuranPinjaman)}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1">Jasa Pinjaman</label>
+                      <input type="number" value={koreksiForm.jasaPinjaman} onChange={(e) => setKoreksiForm((f) => ({ ...f, jasaPinjaman: e.target.value }))} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+                      <p className="text-[11px] text-navy-500 mt-0.5">Sebelumnya: {formatRupiah(koreksiItem.jasaPinjaman)}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1">Catatan Koreksi</label>
+                      <textarea value={koreksiForm.catatan} onChange={(e) => setKoreksiForm((f) => ({ ...f, catatan: e.target.value }))} placeholder="Alasan koreksi..." rows={2} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none resize-none" />
+                    </div>
+                  </div>
+                  <div className="border-t border-navy-700/50 pt-3 mb-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-navy-400">Total Baru</span>
+                      <span className="font-bold text-accent-400">{formatRupiah((Number(koreksiForm.simpananWajib) || 0) + (Number(koreksiForm.angsuranPinjaman) || 0) + (Number(koreksiForm.jasaPinjaman) || 0))}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => { setKoreksiItem(null); setKoreksiSaved(false); }} className="flex-1 bg-navy-700 hover:bg-navy-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">Batal</button>
+                    <button type="button" onClick={saveKoreksi} className="flex-1 flex items-center justify-center gap-2 bg-warning-500 hover:bg-warning-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
+                      <Save className="w-4 h-4" /> Simpan Koreksi
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
