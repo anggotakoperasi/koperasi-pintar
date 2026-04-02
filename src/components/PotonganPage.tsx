@@ -51,6 +51,19 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
       .finally(() => setLoading(false));
   }, []);
 
+  const rekapPerBulan = useMemo(() => {
+    const map: Record<string, { bulan: string; total: number; count: number; simpWajib: number; angsuran: number; jasa: number }> = {};
+    potonganList.forEach((p) => {
+      if (!map[p.bulan]) map[p.bulan] = { bulan: p.bulan, total: 0, count: 0, simpWajib: 0, angsuran: 0, jasa: 0 };
+      map[p.bulan].total += p.totalPotongan;
+      map[p.bulan].count += 1;
+      map[p.bulan].simpWajib += p.simpananWajib;
+      map[p.bulan].angsuran += p.angsuranPinjaman;
+      map[p.bulan].jasa += p.jasaPinjaman;
+    });
+    return Object.values(map).sort((a, b) => b.bulan.localeCompare(a.bulan));
+  }, [potonganList]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -180,19 +193,6 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
       </div>
     );
   }
-
-  const rekapPerBulan = useMemo(() => {
-    const map: Record<string, { bulan: string; total: number; count: number; simpWajib: number; angsuran: number; jasa: number }> = {};
-    potonganList.forEach((p) => {
-      if (!map[p.bulan]) map[p.bulan] = { bulan: p.bulan, total: 0, count: 0, simpWajib: 0, angsuran: 0, jasa: 0 };
-      map[p.bulan].total += p.totalPotongan;
-      map[p.bulan].count += 1;
-      map[p.bulan].simpWajib += p.simpananWajib;
-      map[p.bulan].angsuran += p.angsuranPinjaman;
-      map[p.bulan].jasa += p.jasaPinjaman;
-    });
-    return Object.values(map).sort((a, b) => b.bulan.localeCompare(a.bulan));
-  }, [potonganList]);
 
   if (activeTab === "potongan_rekap") {
     return (
