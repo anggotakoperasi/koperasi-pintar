@@ -423,14 +423,18 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
                                 <td className="px-3 py-2 text-sm font-mono font-bold text-success-400">{row.kode}</td>
                                 <td className="px-3 py-2 text-sm text-white">{row.keterangan}</td>
                                 <td className="px-3 py-2 text-sm text-navy-300">{row.noRek}</td>
-                                <td className="px-3 py-2 text-sm text-navy-300 text-center">{row.tglPot}</td>
+                                <td className="px-3 py-2 text-center">
+                                  <input type="text" value={row.tglPot} onChange={(e) => { const v = e.target.value; setPinjamanRows((prev) => prev.map((r, j) => j === i ? { ...r, tglPot: v } : r)); }} className="w-14 bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white text-center outline-none focus:border-accent-500" />
+                                </td>
                                 <td className="px-3 py-2 text-right">
                                   <input type="number" value={row.pokok} onChange={(e) => { const v = e.target.value; setPinjamanRows((prev) => prev.map((r, j) => j === i ? { ...r, pokok: v } : r)); }} className="w-24 bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white text-right outline-none focus:border-accent-500" />
                                 </td>
                                 <td className="px-3 py-2 text-right">
                                   <input type="number" value={row.jasa} onChange={(e) => { const v = e.target.value; setPinjamanRows((prev) => prev.map((r, j) => j === i ? { ...r, jasa: v } : r)); }} className="w-24 bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white text-right outline-none focus:border-accent-500" />
                                 </td>
-                                <td className="px-3 py-2 text-sm font-bold text-white">{row.deskripsi}</td>
+                                <td className="px-3 py-2">
+                                  <input type="text" value={row.deskripsi} onChange={(e) => { const v = e.target.value; setPinjamanRows((prev) => prev.map((r, j) => j === i ? { ...r, deskripsi: v } : r)); }} className="w-full bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white font-bold outline-none focus:border-accent-500" />
+                                </td>
                               </tr>
                             ))}
                           </tbody>
