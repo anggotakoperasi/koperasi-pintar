@@ -181,20 +181,20 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
     );
   }
 
-  if (activeTab === "potongan_rekap") {
-    const rekapPerBulan = useMemo(() => {
-      const map: Record<string, { bulan: string; total: number; count: number; simpWajib: number; angsuran: number; jasa: number }> = {};
-      potonganList.forEach((p) => {
-        if (!map[p.bulan]) map[p.bulan] = { bulan: p.bulan, total: 0, count: 0, simpWajib: 0, angsuran: 0, jasa: 0 };
-        map[p.bulan].total += p.totalPotongan;
-        map[p.bulan].count += 1;
-        map[p.bulan].simpWajib += p.simpananWajib;
-        map[p.bulan].angsuran += p.angsuranPinjaman;
-        map[p.bulan].jasa += p.jasaPinjaman;
-      });
-      return Object.values(map).sort((a, b) => b.bulan.localeCompare(a.bulan));
-    }, [potonganList]);
+  const rekapPerBulan = useMemo(() => {
+    const map: Record<string, { bulan: string; total: number; count: number; simpWajib: number; angsuran: number; jasa: number }> = {};
+    potonganList.forEach((p) => {
+      if (!map[p.bulan]) map[p.bulan] = { bulan: p.bulan, total: 0, count: 0, simpWajib: 0, angsuran: 0, jasa: 0 };
+      map[p.bulan].total += p.totalPotongan;
+      map[p.bulan].count += 1;
+      map[p.bulan].simpWajib += p.simpananWajib;
+      map[p.bulan].angsuran += p.angsuranPinjaman;
+      map[p.bulan].jasa += p.jasaPinjaman;
+    });
+    return Object.values(map).sort((a, b) => b.bulan.localeCompare(a.bulan));
+  }, [potonganList]);
 
+  if (activeTab === "potongan_rekap") {
     return (
       <div className="space-y-6">
         <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 p-6">
