@@ -54,7 +54,6 @@ const menuItems: MenuItem[] = [
   {
     id: "potongan", label: "Daftar Potongan", icon: Receipt,
     children: [
-      { id: "potongan", label: "Daftar Potongan", icon: ListChecks },
       { id: "potongan_cetak", label: "Pencetakan Daftar Potongan", icon: Printer },
       { id: "potongan_struk", label: "Pencetakan Struk Potongan", icon: FileCheck },
       { id: "potongan_rekap", label: "Rekap Daftar Potongan", icon: ClipboardList },
