@@ -44,6 +44,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   const [loading, setLoading] = useState(true);
   const [detailItem, setDetailItem] = useState<Potongan | null>(null);
   const [gagalPopup, setGagalPopup] = useState(false);
+  const [prosesPopup, setProsesPopup] = useState(false);
   const [koreksiItem, setKoreksiItem] = useState<Potongan | null>(null);
   const [koreksiSaved, setKoreksiSaved] = useState(false);
   const [koreksiSearch, setKoreksiSearch] = useState("");
@@ -70,10 +71,11 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   }, []);
 
   useEffect(() => {
-    if (!koreksiItem && !detailItem && !gagalPopup) return;
+    if (!koreksiItem && !detailItem && !gagalPopup && !prosesPopup) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.preventDefault();
+        if (prosesPopup) { setProsesPopup(false); return; }
         if (gagalPopup) { setGagalPopup(false); return; }
         if (koreksiItem) { setKoreksiItem(null); setKoreksiSaved(false); return; }
         if (detailItem) setDetailItem(null);
@@ -81,7 +83,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [koreksiItem, detailItem, gagalPopup]);
+  }, [koreksiItem, detailItem, gagalPopup, prosesPopup]);
 
   const openKoreksi = (p: Potongan) => {
     setKoreksiItem(p);
@@ -576,7 +578,18 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 print:hidden">
         <StatCard title="Total Potongan" value={formatRupiah(totalPotongan)} icon={Receipt} color="blue" />
         <StatCard title="Terkirim" value={terkirim.toString()} subtitle="potongan berhasil" icon={CheckCircle2} color="green" />
-        <StatCard title="Dalam Proses" value={proses.toString()} subtitle="menunggu verifikasi" icon={Clock} color="amber" />
+        <div className="bg-navy-900/80 rounded-2xl p-4 lg:p-5 border border-warning-500/20 hover:border-opacity-50 transition-all">
+          <div className="flex items-start justify-between mb-3">
+            <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-xl bg-warning-500/15 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-warning-400" />
+            </div>
+          </div>
+          <p className="text-xs lg:text-sm text-navy-300 mb-1">Dalam Proses</p>
+          <p className="text-xl lg:text-2xl font-bold text-white">{proses}</p>
+          <button type="button" onClick={() => setProsesPopup(true)} className="mt-2 text-xs font-medium text-warning-400 bg-warning-600/15 hover:bg-warning-600/25 border border-warning-600/30 px-3 py-1 rounded-lg transition-colors cursor-pointer">
+            {proses > 0 ? `${proses} menunggu verifikasi →` : "Tidak ada dalam proses"}
+          </button>
+        </div>
         <div className="bg-navy-900/80 rounded-2xl p-4 lg:p-5 border border-danger-500/20 hover:border-opacity-50 transition-all">
           <div className="flex items-start justify-between mb-3">
             <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-xl bg-danger-500/15 flex items-center justify-center">
@@ -630,6 +643,54 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
                     </div>
                     <div className="bg-danger-600/10 border border-danger-600/20 rounded-lg p-2.5">
                       <p className="text-xs text-danger-300"><span className="font-semibold">Tindakan:</span> Verifikasi ulang data rekening anggota, pastikan saldo mencukupi, lalu kirim ulang permintaan potongan melalui sistem.</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {prosesPopup && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setProsesPopup(false)}>
+          <div className="bg-navy-900 border border-navy-700/50 rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-warning-500/20 flex items-center justify-center"><Clock className="w-5 h-5 text-warning-400" /></div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Potongan Dalam Proses</h3>
+                  <p className="text-xs text-navy-400">{proses} potongan menunggu verifikasi</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setProsesPopup(false)} className="p-1.5 rounded-lg text-navy-400 hover:bg-navy-800 hover:text-white transition-colors cursor-pointer"><XCircle className="w-5 h-5" /></button>
+            </div>
+            {potonganList.filter((p) => p.status === "proses").length === 0 ? (
+              <div className="text-center py-8">
+                <CheckCircle2 className="w-12 h-12 text-success-400 mx-auto mb-3" />
+                <p className="text-sm text-navy-300">Semua potongan sudah diproses, tidak ada yang menunggu verifikasi.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {potonganList.filter((p) => p.status === "proses").map((p) => (
+                  <div key={p.id} className="bg-navy-800/50 rounded-xl p-4 border border-warning-600/20">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="text-sm font-medium text-white">{p.namaAnggota}</p>
+                        <p className="text-xs text-navy-400">ID: {p.anggotaId} — {p.bulan}</p>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-warning-600/20 text-warning-400 border border-warning-600/30">
+                        <Clock className="w-3 h-3" /> Proses
+                      </span>
+                    </div>
+                    <div className="text-xs text-navy-400 space-y-1 mb-3">
+                      <div className="flex justify-between"><span>Simpanan Wajib</span><span className="text-white">{formatRupiah(p.simpananWajib)}</span></div>
+                      <div className="flex justify-between"><span>Angsuran Pinjaman</span><span className="text-white">{formatRupiah(p.angsuranPinjaman)}</span></div>
+                      <div className="flex justify-between"><span>Jasa Pinjaman</span><span className="text-white">{formatRupiah(p.jasaPinjaman)}</span></div>
+                      <div className="flex justify-between border-t border-navy-700/50 pt-1 mt-1"><span className="font-medium text-navy-300">Total</span><span className="font-bold text-accent-400">{formatRupiah(p.totalPotongan)}</span></div>
+                    </div>
+                    <div className="bg-warning-600/10 border border-warning-600/20 rounded-lg p-2.5">
+                      <p className="text-xs text-warning-300"><span className="font-semibold">Status:</span> Potongan sedang dalam antrian verifikasi oleh bendahara. Estimasi selesai dalam 1-3 hari kerja.</p>
                     </div>
                   </div>
                 ))}
