@@ -237,7 +237,7 @@ export default function SimpananPage() {
                   Anggota
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-navy-500 pointer-events-none" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-navy-400 pointer-events-none" />
                   <input
                     type="text"
                     value={form.anggotaQuery}
@@ -245,7 +245,7 @@ export default function SimpananPage() {
                       setForm((f) => ({ ...f, anggotaQuery: e.target.value, anggotaId: "" }))
                     }
                     placeholder="Cari nama, NRP/NIP, atau nomor anggota..."
-                    className="w-full rounded-xl border border-navy-700 bg-navy-800 pl-9 pr-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none focus:border-accent-500/50 focus:ring-1 focus:ring-accent-500/30"
+                    className="w-full rounded-xl border border-navy-700 bg-navy-800 pl-9 pr-3 py-2.5 text-sm text-white placeholder-navy-400 outline-none focus:border-accent-500/50 focus:ring-1 focus:ring-accent-500/30"
                   />
                 </div>
                 {selectedAnggota ? (
@@ -255,7 +255,7 @@ export default function SimpananPage() {
                 ) : null}
                 <ul className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-navy-700 bg-navy-800/80 divide-y divide-navy-700/50">
                   {filteredModalAnggota.length === 0 ? (
-                    <li className="px-3 py-3 text-sm text-navy-500 text-center">
+                    <li className="px-3 py-3 text-sm text-navy-400 text-center">
                       Tidak ada anggota yang cocok.
                     </li>
                   ) : (
@@ -319,7 +319,7 @@ export default function SimpananPage() {
                   onBlur={(e) => setForm((f) => ({ ...f, jumlah: formatThousands(e.target.value) }))}
                   onFocus={(e) => setForm((f) => ({ ...f, jumlah: stripThousands(e.target.value) }))}
                   placeholder="0"
-                  className="w-full rounded-xl border border-navy-700 bg-navy-800 px-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none focus:border-accent-500/50 focus:ring-1 focus:ring-accent-500/30"
+                  className="w-full rounded-xl border border-navy-700 bg-navy-800 px-3 py-2.5 text-sm text-white placeholder-navy-400 outline-none focus:border-accent-500/50 focus:ring-1 focus:ring-accent-500/30"
                 />
               </div>
 
@@ -332,7 +332,7 @@ export default function SimpananPage() {
                   onChange={(e) => setForm((f) => ({ ...f, keterangan: e.target.value }))}
                   rows={3}
                   placeholder="Opsional"
-                  className="w-full resize-none rounded-xl border border-navy-700 bg-navy-800 px-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none focus:border-accent-500/50 focus:ring-1 focus:ring-accent-500/30"
+                  className="w-full resize-none rounded-xl border border-navy-700 bg-navy-800 px-3 py-2.5 text-sm text-white placeholder-navy-400 outline-none focus:border-accent-500/50 focus:ring-1 focus:ring-accent-500/30"
                 />
               </div>
 
@@ -392,7 +392,7 @@ export default function SimpananPage() {
                   className="bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1 text-xs text-white outline-none"
                   title="Dari tanggal"
                 />
-                <span className="text-navy-500 text-xs">s/d</span>
+                <span className="text-navy-400 text-xs">s/d</span>
                 <input
                   type="date"
                   value={detailDateTo}
@@ -459,7 +459,7 @@ export default function SimpananPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-center text-navy-500 text-xs py-4">Tidak ada transaksi untuk filter ini.</p>
+              <p className="text-center text-navy-400 text-xs py-4">Tidak ada transaksi untuk filter ini.</p>
             )}
 
             {detailTransactions.length > 0 && (() => {

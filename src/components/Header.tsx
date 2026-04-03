@@ -241,7 +241,7 @@ export default function Header({
                 ].map((n, i) => (
                   <li key={i} className={`px-4 py-3 text-sm ${n.unread ? "bg-accent-500/5" : ""}`}>
                     <p className={`${n.unread ? "text-white font-medium" : "text-navy-300"}`}>{n.msg}</p>
-                    <p className="text-xs text-navy-500 mt-1">{n.time}</p>
+                    <p className="text-xs text-navy-400 mt-1">{n.time}</p>
                   </li>
                 ))}
               </ul>

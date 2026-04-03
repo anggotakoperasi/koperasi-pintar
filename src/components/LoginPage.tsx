@@ -132,14 +132,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <Image src="/logo.png" alt="Logo PRIMKOPPOL" width={96} height={96} className="w-full h-full object-cover" priority />
           </div>
           <h1 className="text-3xl font-bold text-white mb-1">Koperasi Pintar</h1>
-          <p className="text-navy-300 text-base">PRIMKOPPOL Resor Subang</p>
-          <p className="text-navy-500 text-sm mt-1">Sistem Simpan Pinjam Koperasi Terpadu</p>
+          <p className="text-navy-200 text-base">PRIMKOPPOL Resor Subang</p>
+          <p className="text-navy-300 text-sm mt-1">Sistem Simpan Pinjam Koperasi Terpadu</p>
         </div>
 
         {/* Login Card */}
         <div className="bg-navy-900/90 border border-navy-700/40 rounded-3xl p-7 backdrop-blur-sm shadow-2xl">
           <h2 className="text-lg font-semibold text-white mb-1">Masuk ke Sistem</h2>
-          <p className="text-sm text-navy-400 mb-6">Silakan pilih jabatan dan masukkan akun Anda</p>
+          <p className="text-sm text-navy-300 mb-6">Silakan pilih jabatan dan masukkan akun Anda</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Role selector */}
@@ -218,7 +218,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 value={username}
                 onChange={(e) => { setUsername(e.target.value); setError(""); }}
                 placeholder="Masukkan username"
-                className="w-full bg-navy-800 border border-navy-600/50 rounded-xl px-4 py-3.5 text-sm text-white placeholder-navy-500 outline-none focus:border-accent-500/70 focus:ring-1 focus:ring-accent-500/30 transition-colors"
+                className="w-full bg-navy-800 border border-navy-600/50 rounded-xl px-4 py-3.5 text-sm text-white placeholder-navy-400 outline-none focus:border-accent-500/70 focus:ring-1 focus:ring-accent-500/30 transition-colors"
                 autoComplete="username"
               />
             </div>
@@ -234,7 +234,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(""); }}
                   placeholder="Masukkan password"
-                  className="w-full bg-navy-800 border border-navy-600/50 rounded-xl px-4 py-3.5 pr-12 text-sm text-white placeholder-navy-500 outline-none focus:border-accent-500/70 focus:ring-1 focus:ring-accent-500/30 transition-colors"
+                  className="w-full bg-navy-800 border border-navy-600/50 rounded-xl px-4 py-3.5 pr-12 text-sm text-white placeholder-navy-400 outline-none focus:border-accent-500/70 focus:ring-1 focus:ring-accent-500/30 transition-colors"
                   autoComplete="current-password"
                 />
                 <button
@@ -275,7 +275,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           {/* Demo helper */}
           <div className="mt-5 pt-5 border-t border-navy-700/40">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-navy-500">Mode demo — isi otomatis</p>
+              <p className="text-xs text-navy-400">Mode demo — isi otomatis</p>
               <button
                 type="button"
                 onClick={fillDemo}
@@ -288,7 +288,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-navy-600 mt-6">
+        <p className="text-center text-xs text-navy-400 mt-6">
           Koperasi Pintar v1.0 &middot; PRIMKOPPOL Resor Subang
         </p>
       </div>

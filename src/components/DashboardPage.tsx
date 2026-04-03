@@ -145,7 +145,7 @@ export default function DashboardPage() {
             ].map((item, i) => (
               <div key={i}>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-navy-300">{item.label}</span>
+                  <span className="text-navy-200">{item.label}</span>
                   <span className="text-white font-medium">{item.value}%</span>
                 </div>
                 <div className="h-2 bg-navy-800 rounded-full overflow-hidden">
@@ -184,7 +184,7 @@ export default function DashboardPage() {
               <div key={i} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-navy-300">{item.name}</span>
+                  <span className="text-navy-200">{item.name}</span>
                 </div>
                 <span className="text-white font-medium">{formatRupiah(item.value)}</span>
               </div>

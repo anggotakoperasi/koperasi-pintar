@@ -80,7 +80,7 @@ const selectClass =
   "w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none cursor-pointer";
 
 const inputClass =
-  "w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none";
+  "w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder-navy-400 outline-none";
 
 interface AnggotaPageProps {
   globalSelectedAnggota?: Anggota | null;
@@ -819,15 +819,15 @@ export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedCle
               {/* Info cards row */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="bg-navy-800/60 rounded-xl p-3 border border-navy-700/30">
-                  <p className="text-[11px] text-navy-500 uppercase tracking-wider">No. Anggota</p>
+                  <p className="text-[11px] text-navy-400 uppercase tracking-wider">No. Anggota</p>
                   <p className="text-base font-bold text-white mt-1">{detailAnggota.nomorAnggota}</p>
                 </div>
                 <div className="bg-navy-800/60 rounded-xl p-3 border border-navy-700/30">
-                  <p className="text-[11px] text-navy-500 uppercase tracking-wider">NRP/NIP</p>
+                  <p className="text-[11px] text-navy-400 uppercase tracking-wider">NRP/NIP</p>
                   <p className="text-base font-bold text-white mt-1">{detailAnggota.nrp || "-"}</p>
                 </div>
                 <div className="bg-navy-800/60 rounded-xl p-3 border border-navy-700/30">
-                  <p className="text-[11px] text-navy-500 uppercase tracking-wider">Status</p>
+                  <p className="text-[11px] text-navy-400 uppercase tracking-wider">Status</p>
                   <p className={`text-base font-bold mt-1 ${
                     detailAnggota.status === "aktif" ? "text-success-400" :
                     detailAnggota.status === "pasif" ? "text-warning-400" : "text-danger-400"
@@ -836,17 +836,17 @@ export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedCle
                   </p>
                 </div>
                 <div className="bg-navy-800/60 rounded-xl p-3 border border-navy-700/30">
-                  <p className="text-[11px] text-navy-500 uppercase tracking-wider">Bergabung</p>
+                  <p className="text-[11px] text-navy-400 uppercase tracking-wider">Bergabung</p>
                   <p className="text-base font-bold text-white mt-1">
                     {detailAnggota.bergabung ? new Date(detailAnggota.bergabung).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"}
                   </p>
                 </div>
                 <div className="bg-navy-800/60 rounded-xl p-3 border border-navy-700/30">
-                  <p className="text-[11px] text-navy-500 uppercase tracking-wider">No. Hp</p>
+                  <p className="text-[11px] text-navy-400 uppercase tracking-wider">No. Hp</p>
                   <p className="text-base font-bold text-white mt-1">{detailAnggota.noHp || "-"}</p>
                 </div>
                 <div className="bg-navy-800/60 rounded-xl p-3 border border-navy-700/30">
-                  <p className="text-[11px] text-navy-500 uppercase tracking-wider">Email</p>
+                  <p className="text-[11px] text-navy-400 uppercase tracking-wider">Email</p>
                   <p className="text-base font-bold text-white mt-1 break-all">{detailAnggota.email || "-"}</p>
                 </div>
               </div>
@@ -973,10 +973,10 @@ export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedCle
                 Anda akan menghapus data anggota:
               </p>
               <p className="text-base font-semibold text-white mb-1">{deleteConfirm.nama}</p>
-              <p className="text-xs text-navy-500 mb-4">
+              <p className="text-xs text-navy-400 mb-4">
                 {deleteConfirm.pangkat} — NRP/NIP: {deleteConfirm.nrp}
               </p>
-              <p className="text-xs text-danger-400/80 bg-danger-600/10 border border-danger-600/20 rounded-xl px-3 py-2 mb-5">
+              <p className="text-xs text-danger-400 bg-danger-600/10 border border-danger-600/20 rounded-xl px-3 py-2 mb-5">
                 Semua data terkait (simpanan, pinjaman, potongan) juga akan dihapus. Tindakan ini tidak bisa dibatalkan.
               </p>
               <div className="flex gap-2">

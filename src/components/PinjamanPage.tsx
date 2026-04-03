@@ -406,7 +406,7 @@ export default function PinjamanPage() {
                             })}
                       </span>
                     </div>
-                    <p className="text-xs text-navy-500 pt-1">
+                    <p className="text-xs text-navy-400 pt-1">
                       Tanggal pinjam:{" "}
                       {new Date(tanggalPinjamBaru + "T12:00:00").toLocaleDateString("id-ID", {
                         day: "numeric",
@@ -482,7 +482,7 @@ export default function PinjamanPage() {
                   ))}
                 </select>
                 {pinjamanAktifBayar.length === 0 && (
-                  <p className="text-xs text-navy-500 mt-2">Tidak ada pinjaman dengan sisa pokok.</p>
+                  <p className="text-xs text-navy-400 mt-2">Tidak ada pinjaman dengan sisa pokok.</p>
                 )}
               </div>
               <div>

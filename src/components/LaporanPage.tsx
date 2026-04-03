@@ -865,10 +865,10 @@ export default function LaporanPage() {
                         className="w-full flex items-center justify-between text-left px-3 py-2.5 rounded-xl hover:bg-navy-800/60 transition-colors group cursor-pointer"
                       >
                         <div className="flex items-center gap-2">
-                          <FileText className="w-3.5 h-3.5 text-navy-500 group-hover:text-navy-300" />
+                          <FileText className="w-3.5 h-3.5 text-navy-400 group-hover:text-navy-200" />
                           <span className="text-sm text-navy-200 group-hover:text-white transition-colors">{item}</span>
                         </div>
-                        <Eye className="w-3.5 h-3.5 text-navy-600 group-hover:text-accent-400 transition-colors" />
+                        <Eye className="w-3.5 h-3.5 text-navy-500 group-hover:text-accent-400 transition-colors" />
                       </button>
                     ))}
                   </div>
@@ -897,7 +897,7 @@ export default function LaporanPage() {
                 <p className="text-sm font-medium text-white">Nominatif</p>
                 <p className="text-xs text-navy-400">Preview Nominatif Simpanan & Pinjaman</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-navy-500 ml-auto group-hover:text-white transition-colors" />
+              <ArrowRight className="w-4 h-4 text-navy-400 ml-auto group-hover:text-white transition-colors" />
             </button>
             <button
               onClick={() => {
@@ -912,7 +912,7 @@ export default function LaporanPage() {
                 <p className="text-sm font-medium text-white">Anggota Aktif</p>
                 <p className="text-xs text-navy-400">Preview Daftar Anggota Aktif</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-navy-500 ml-auto group-hover:text-white transition-colors" />
+              <ArrowRight className="w-4 h-4 text-navy-400 ml-auto group-hover:text-white transition-colors" />
             </button>
             <button
               onClick={() => {
@@ -927,7 +927,7 @@ export default function LaporanPage() {
                 <p className="text-sm font-medium text-white">Rekap SHU</p>
                 <p className="text-xs text-navy-400">Preview Rekapitulasi SHU</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-navy-500 ml-auto group-hover:text-white transition-colors" />
+              <ArrowRight className="w-4 h-4 text-navy-400 ml-auto group-hover:text-white transition-colors" />
             </button>
           </div>
         </div>
@@ -990,7 +990,7 @@ export default function LaporanPage() {
                   ))}
                   {report.rows.length === 0 && (
                     <tr>
-                      <td colSpan={report.headers.length} className="px-4 py-8 text-center text-navy-500 text-sm">
+                      <td colSpan={report.headers.length} className="px-4 py-8 text-center text-navy-400 text-sm">
                         Tidak ada data untuk laporan ini
                       </td>
                     </tr>
@@ -1015,8 +1015,8 @@ export default function LaporanPage() {
 
             {/* Footer info */}
             <div className="px-5 py-3 border-t border-navy-700/50 flex items-center justify-between">
-              <p className="text-xs text-navy-500">{report.rows.length} baris data</p>
-              <p className="text-xs text-navy-500">
+              <p className="text-xs text-navy-400">{report.rows.length} baris data</p>
+              <p className="text-xs text-navy-400">
                 Periode: {bulanLabel} · Dicetak: {new Date().toLocaleDateString("id-ID")}
               </p>
             </div>

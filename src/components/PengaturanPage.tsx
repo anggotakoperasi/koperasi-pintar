@@ -207,7 +207,7 @@ export default function PengaturanPage() {
                         <AlertTriangle className="w-4 h-4 text-warning-400 shrink-0 mt-0.5" />
                         <div className="text-xs text-warning-400">
                           <p className="font-semibold">Perhatian: Akun Super Admin</p>
-                          <p className="mt-0.5 text-warning-400/80">Mengubah data Super Admin dapat mengakibatkan kehilangan akses ke sistem. Pastikan Anda mengetahui apa yang dilakukan.</p>
+                          <p className="mt-0.5 text-warning-400">Mengubah data Super Admin dapat mengakibatkan kehilangan akses ke sistem. Pastikan Anda mengetahui apa yang dilakukan.</p>
                         </div>
                       </div>
                     )}
@@ -262,7 +262,7 @@ export default function PengaturanPage() {
                         <Shield className="w-4 h-4 text-danger-400 shrink-0 mt-0.5" />
                         <div className="text-xs text-danger-400">
                           <p className="font-semibold">Konfirmasi Perubahan Super Admin</p>
-                          <p className="mt-0.5 text-danger-400/80">Anda akan mengubah data akun Super Admin. Klik &quot;Simpan&quot; sekali lagi untuk mengonfirmasi.</p>
+                          <p className="mt-0.5 text-danger-400">Anda akan mengubah data akun Super Admin. Klik &quot;Simpan&quot; sekali lagi untuk mengonfirmasi.</p>
                         </div>
                       </div>
                     )}
@@ -305,7 +305,7 @@ export default function PengaturanPage() {
                         </tbody>
                       </table>
                     </div>
-                    <p className="text-xs text-navy-500">Klik ikon edit untuk mengubah data operator. Hati-hati saat mengubah akun Super Admin.</p>
+                    <p className="text-xs text-navy-400">Klik ikon edit untuk mengubah data operator. Hati-hati saat mengubah akun Super Admin.</p>
                   </>
                 )}
               </>
@@ -385,7 +385,7 @@ export default function PengaturanPage() {
                   Peringatan: Restore akan menimpa data saat ini. Pastikan Anda sudah backup terlebih dahulu.
                 </div>
                 <div className="border-2 border-dashed border-navy-600 rounded-xl p-8 text-center">
-                  <Upload className="w-8 h-8 text-navy-500 mx-auto mb-2" />
+                  <Upload className="w-8 h-8 text-navy-400 mx-auto mb-2" />
                   <p className="text-sm text-navy-400">Pilih file backup untuk di-restore</p>
                   <input type="file" accept=".json,.sql,.bak" className="mt-3 text-sm text-navy-300 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-accent-600 file:text-white hover:file:bg-accent-500 cursor-pointer" />
                 </div>
@@ -478,7 +478,7 @@ export default function PengaturanPage() {
                 <p className="text-sm font-semibold text-white">{section.title}</p>
                 <p className="text-xs text-navy-400 mt-0.5">{section.desc}</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-navy-600 group-hover:text-navy-300 transition-colors" />
+              <ChevronRight className="w-5 h-5 text-navy-500 group-hover:text-navy-200 transition-colors" />
             </button>
           );
         })}

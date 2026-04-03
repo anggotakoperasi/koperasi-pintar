@@ -162,7 +162,7 @@ export default function SHUPage() {
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: distribusiColors[i] }} />
-                  <span className="text-sm text-navy-300">{item.kategori}</span>
+                  <span className="text-sm text-navy-200">{item.kategori}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-navy-400">{item.persentase}%</span>
@@ -180,8 +180,8 @@ export default function SHUPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={top5SHU} layout="vertical" barSize={20}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e3a6e30" horizontal={false} />
-                <XAxis type="number" tick={{ fill: "#7890c1", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} />
-                <YAxis type="category" dataKey="name" tick={{ fill: "#c5d0e6", fontSize: 12 }} axisLine={false} tickLine={false} width={100} />
+                <XAxis type="number" tick={{ fill: "#b0c4de", fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000000).toFixed(0)}jt`} />
+                <YAxis type="category" dataKey="name" tick={{ fill: "#e0e8f2", fontSize: 12 }} axisLine={false} tickLine={false} width={100} />
                 <Tooltip formatter={(value) => formatRupiah(Number(value))} contentStyle={{ background: "#0f1d3d", border: "1px solid #2d4e93", borderRadius: "12px", fontSize: "12px" }} />
                 <Bar dataKey="shu" name="Estimasi SHU" fill="#3b82f6" radius={[0, 6, 6, 0]} />
               </BarChart>
