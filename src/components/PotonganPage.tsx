@@ -1148,17 +1148,12 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="text-lg font-bold text-white mb-1">Koreksi Potongan</h3>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-navy-400">{koreksiItem.namaAnggota} — {koreksiPeriode ? dateToMonthLabel(koreksiPeriode) : koreksiItem.bulan}</p>
-                <button type="button" onClick={() => setKoreksiEditPeriode(!koreksiEditPeriode)} className="text-navy-400 hover:text-accent-400 transition-colors cursor-pointer" title="Ubah periode"><Calendar className="w-3.5 h-3.5" /></button>
-              </div>
-              {koreksiEditPeriode && (
-                <div className="mt-2"><DatePickerID value={koreksiPeriode || labelToDate(koreksiItem.bulan)} onChange={setKoreksiPeriode} /></div>
-              )}
+              <p className="text-sm text-white mb-2">{koreksiItem.namaAnggota}</p>
+              <DatePickerID value={koreksiPeriode || labelToDate(koreksiItem.bulan)} onChange={setKoreksiPeriode} />
             </div>
             <div className="flex items-center gap-1.5">
-              <button type="button" onClick={handlePrintKoreksi} className="p-2 bg-navy-800 hover:bg-navy-700 text-navy-300 hover:text-white rounded-lg transition-colors cursor-pointer" title="Cetak"><Printer className="w-4 h-4" /></button>
-              <button type="button" onClick={handleShareKoreksi} className="p-2 bg-navy-800 hover:bg-navy-700 text-navy-300 hover:text-white rounded-lg transition-colors cursor-pointer" title="Bagikan"><Share2 className="w-4 h-4" /></button>
+              <button type="button" onClick={handlePrintKoreksi} className="p-2 bg-navy-800 hover:bg-navy-700 text-white rounded-lg transition-colors cursor-pointer" title="Cetak"><Printer className="w-4 h-4" /></button>
+              <button type="button" onClick={handleShareKoreksi} className="p-2 bg-navy-800 hover:bg-navy-700 text-white rounded-lg transition-colors cursor-pointer" title="Bagikan"><Share2 className="w-4 h-4" /></button>
             </div>
           </div>
 
@@ -1166,7 +1161,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
             <div className="text-center py-6">
               <CheckCircle2 className="w-12 h-12 text-success-400 mx-auto mb-3" />
               <p className="text-sm font-medium text-success-400 mb-1">Koreksi berhasil disimpan!</p>
-              <p className="text-xs text-navy-400 mb-4">Total Potongan: {formatRupiah(totalPotonganSimpanan + totalPokokPinjaman + totalJasaPinjaman)}</p>
+              <p className="text-xs text-white mb-4">Total Potongan: {formatRupiah(totalPotonganSimpanan + totalPokokPinjaman + totalJasaPinjaman)}</p>
               <button type="button" onClick={() => { setKoreksiItem(null); setKoreksiSaved(false); setKoreksiAlasan(""); }} className="bg-accent-500 hover:bg-accent-600 text-white px-5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer">Tutup</button>
             </div>
           ) : (
@@ -1183,11 +1178,11 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
                     <table className="w-full">
                       <thead className="bg-navy-800/80">
                         <tr className="border-b border-navy-600/40">
-                          <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Kode</th>
-                          <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Jenis</th>
-                          <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Saldo</th>
-                          <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Potongan</th>
-                          <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">% Jasa</th>
+                          <th className="text-left text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">Kode</th>
+                          <th className="text-left text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">Jenis</th>
+                          <th className="text-right text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">Saldo</th>
+                          <th className="text-right text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">Potongan</th>
+                          <th className="text-right text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">% Jasa</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1204,8 +1199,8 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
                     </table>
                   </div>
                   <div className="mt-3 flex justify-between items-center border-t-2 border-navy-600 pt-3">
-                    <div className="text-sm"><span className="text-navy-400">Total Simpanan:</span> <span className="font-bold text-white ml-2">{formatRupiah(totalSimpanan)}</span></div>
-                    <div className="text-sm"><span className="text-navy-400">Total Potongan:</span> <span className="font-bold text-accent-400 ml-2">{formatRupiah(totalPotonganSimpanan)}</span></div>
+                    <div className="text-sm"><span className="text-white">Total Simpanan:</span> <span className="font-bold text-white ml-2">{formatRupiah(totalSimpanan)}</span></div>
+                    <div className="text-sm"><span className="text-white">Total Potongan:</span> <span className="font-bold text-accent-400 ml-2">{formatRupiah(totalPotonganSimpanan)}</span></div>
                   </div>
                 </div>
               )}
@@ -1217,13 +1212,13 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
                     <table className="w-full">
                       <thead className="bg-navy-800/80">
                         <tr className="border-b border-navy-600/40">
-                          <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Kd</th>
-                          <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Keterangan</th>
-                          <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">No-Rek</th>
-                          <th className="text-center text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Tgl-Pot</th>
-                          <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Pot. Pokok</th>
-                          <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Pot. Jasa</th>
-                          <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-3 py-2.5">Deskripsi</th>
+                          <th className="text-left text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">Kd</th>
+                          <th className="text-left text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">Keterangan</th>
+                          <th className="text-left text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">No-Rek</th>
+                          <th className="text-center text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">Tgl-Pot</th>
+                          <th className="text-right text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">Pot. Pokok</th>
+                          <th className="text-right text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">Pot. Jasa</th>
+                          <th className="text-left text-xs font-semibold text-white uppercase tracking-wider px-3 py-2.5">Deskripsi</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1231,7 +1226,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
                           <tr key={`${row.kode}-${row.noRek}`} className="border-b border-navy-800/50">
                             <td className="px-3 py-2 text-sm font-mono font-bold text-success-400">{row.kode}</td>
                             <td className="px-3 py-2 text-sm text-white">{row.keterangan}</td>
-                            <td className="px-3 py-2 text-sm text-navy-300">{row.noRek}</td>
+                            <td className="px-3 py-2 text-sm text-white">{row.noRek}</td>
                             <td className="px-3 py-2 text-center"><input type="text" value={row.tglPot} onChange={(e) => { const v = e.target.value; setPinjamanRows((prev) => prev.map((r, j) => j === i ? { ...r, tglPot: v } : r)); }} className="w-14 bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white text-center outline-none focus:border-accent-500" /></td>
                             <td className="px-3 py-2 text-right"><input type="number" value={row.pokok} onChange={(e) => { const v = e.target.value; setPinjamanRows((prev) => prev.map((r, j) => j === i ? { ...r, pokok: v } : r)); }} className="w-24 bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white text-right outline-none focus:border-accent-500" /></td>
                             <td className="px-3 py-2 text-right"><input type="number" value={row.jasa} onChange={(e) => { const v = e.target.value; setPinjamanRows((prev) => prev.map((r, j) => j === i ? { ...r, jasa: v } : r)); }} className="w-24 bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-sm text-white text-right outline-none focus:border-accent-500" /></td>
@@ -1242,15 +1237,15 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
                     </table>
                   </div>
                   <div className="mt-3 flex justify-between items-center border-t-2 border-navy-600 pt-3">
-                    <div className="text-sm"><span className="text-navy-400">Pot. Pokok:</span> <span className="font-bold text-white ml-2">{formatRupiah(totalPokokPinjaman)}</span></div>
-                    <div className="text-sm"><span className="text-navy-400">Pot. Jasa:</span> <span className="font-bold text-accent-400 ml-2">{formatRupiah(totalJasaPinjaman)}</span></div>
+                    <div className="text-sm"><span className="text-white">Pot. Pokok:</span> <span className="font-bold text-white ml-2">{formatRupiah(totalPokokPinjaman)}</span></div>
+                    <div className="text-sm"><span className="text-white">Pot. Jasa:</span> <span className="font-bold text-accent-400 ml-2">{formatRupiah(totalJasaPinjaman)}</span></div>
                   </div>
                 </div>
               )}
 
               <div className="mt-4">
-                <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Alasan Koreksi</label>
-                <textarea value={koreksiAlasan} onChange={(e) => setKoreksiAlasan(e.target.value)} placeholder="Tuliskan alasan koreksi untuk keperluan audit..." className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder-navy-400 outline-none resize-none h-20" />
+                <label className="block text-xs font-medium text-white uppercase tracking-wide mb-1.5">Alasan Koreksi</label>
+                <textarea value={koreksiAlasan} onChange={(e) => setKoreksiAlasan(e.target.value)} placeholder="Tuliskan alasan koreksi untuk keperluan audit..." className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder-navy-500 outline-none resize-none h-20" />
               </div>
 
               <div className="flex gap-2 mt-4">
