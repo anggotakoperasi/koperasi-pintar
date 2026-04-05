@@ -1,10 +1,26 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bell, Search, User, Calendar, Menu, LogOut, ChevronDown, Loader2 } from "lucide-react";
+import { Bell, Search, User, Calendar, Menu, LogOut, ChevronDown, Loader2, CheckCheck } from "lucide-react";
 import type { UserSession } from "./LoginPage";
 import type { Anggota } from "@/data/mock";
 import { searchAnggota } from "@/lib/fetchers";
+
+export interface NotifItem {
+  id: string;
+  msg: string;
+  time: string;
+  unread: boolean;
+  target?: string;
+}
+
+const INITIAL_NOTIFS: NotifItem[] = [
+  { id: "n1", msg: "Pinjaman baru diajukan oleh BRIPKA AHMAD SURYANA", time: "5 menit lalu", unread: true, target: "pinjaman" },
+  { id: "n2", msg: "Setoran simpanan wajib berhasil diproses", time: "1 jam lalu", unread: true, target: "simpanan" },
+  { id: "n3", msg: "Potongan bulan Maret 2026 telah dikirim", time: "3 jam lalu", unread: true, target: "potongan" },
+  { id: "n4", msg: "Backup otomatis berhasil dilakukan", time: "1 hari lalu", unread: false, target: "pengaturan" },
+  { id: "n5", msg: "Anggota baru terdaftar: BRIPTU HENDRA", time: "2 hari lalu", unread: false, target: "anggota" },
+];
 
 interface HeaderProps {
   title: string;
@@ -13,6 +29,7 @@ interface HeaderProps {
   onMobileMenuOpen: () => void;
   onLogout: () => void;
   onSearchSelect?: (anggota: Anggota) => void;
+  onNavigate?: (menuId: string) => void;
 }
 
 export default function Header({
@@ -22,9 +39,11 @@ export default function Header({
   onMobileMenuOpen,
   onLogout,
   onSearchSelect,
+  onNavigate,
 }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifs, setNotifs] = useState<NotifItem[]>(INITIAL_NOTIFS);
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -42,6 +61,8 @@ export default function Header({
     month: "long",
     year: "numeric",
   });
+
+  const unreadCount = notifs.filter((n) => n.unread).length;
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300);
@@ -117,6 +138,18 @@ export default function Header({
     setSearchResults([]);
     setSearchLoading(false);
     closeSearchDropdown();
+  };
+
+  const handleNotifClick = (notif: NotifItem) => {
+    setNotifs((prev) => prev.map((n) => (n.id === notif.id ? { ...n, unread: false } : n)));
+    if (notif.target && onNavigate) {
+      onNavigate(notif.target);
+    }
+    setNotifOpen(false);
+  };
+
+  const markAllRead = () => {
+    setNotifs((prev) => prev.map((n) => ({ ...n, unread: false })));
   };
 
   const initials = user.nama
@@ -223,28 +256,63 @@ export default function Header({
             className="relative p-2 rounded-xl hover:bg-navy-800 transition-colors cursor-pointer"
           >
             <Bell className="w-5 h-5 text-navy-300" />
-            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-danger-500 rounded-full border-2 border-navy-950" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-danger-500 rounded-full border-2 border-navy-950" />
+            )}
           </button>
           {notifOpen && (
             <div className="absolute right-0 top-full mt-2 w-80 bg-navy-800 border border-navy-600/50 rounded-2xl shadow-2xl overflow-hidden z-50">
               <div className="px-4 py-3 border-b border-navy-700/50 flex items-center justify-between">
                 <p className="text-sm font-semibold text-white">Notifikasi</p>
-                <span className="text-xs font-medium text-accent-400 bg-accent-500/15 px-2 py-0.5 rounded-full">3 baru</span>
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <span className="text-xs font-medium text-accent-400 bg-accent-500/15 px-2 py-0.5 rounded-full">
+                      {unreadCount} baru
+                    </span>
+                  )}
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={markAllRead}
+                      className="flex items-center gap-1 text-xs font-medium text-navy-300 hover:text-white transition-colors cursor-pointer px-2 py-0.5 rounded-lg hover:bg-navy-700/60"
+                      title="Tandai semua sudah dibaca"
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
               <ul className="max-h-72 overflow-y-auto divide-y divide-navy-700/40">
-                {[
-                  { msg: "Pinjaman baru diajukan oleh BRIPKA AHMAD SURYANA", time: "5 menit lalu", unread: true },
-                  { msg: "Setoran simpanan wajib berhasil diproses", time: "1 jam lalu", unread: true },
-                  { msg: "Potongan bulan Maret 2026 telah dikirim", time: "3 jam lalu", unread: true },
-                  { msg: "Backup otomatis berhasil dilakukan", time: "1 hari lalu", unread: false },
-                  { msg: "Anggota baru terdaftar: BRIPTU HENDRA", time: "2 hari lalu", unread: false },
-                ].map((n, i) => (
-                  <li key={i} className={`px-4 py-3 text-sm ${n.unread ? "bg-accent-500/5" : ""}`}>
-                    <p className={`${n.unread ? "text-white font-medium" : "text-navy-300"}`}>{n.msg}</p>
-                    <p className="text-xs text-navy-400 mt-1">{n.time}</p>
+                {notifs.map((n) => (
+                  <li key={n.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleNotifClick(n)}
+                      className={`w-full text-left px-4 py-3 text-sm transition-colors cursor-pointer hover:bg-navy-700/40 ${n.unread ? "bg-accent-500/5" : ""}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {n.unread && <span className="mt-1.5 w-2 h-2 bg-accent-400 rounded-full shrink-0" />}
+                        <div className={n.unread ? "" : "ml-4"}>
+                          <p className={`${n.unread ? "text-white font-medium" : "text-navy-300"}`}>{n.msg}</p>
+                          <p className="text-xs text-navy-400 mt-1">{n.time}</p>
+                        </div>
+                      </div>
+                    </button>
                   </li>
                 ))}
               </ul>
+              {unreadCount > 0 && (
+                <div className="px-4 py-2.5 border-t border-navy-700/50">
+                  <button
+                    type="button"
+                    onClick={markAllRead}
+                    className="w-full flex items-center justify-center gap-2 text-xs font-medium text-accent-400 hover:text-accent-300 transition-colors cursor-pointer py-1"
+                  >
+                    <CheckCheck className="w-3.5 h-3.5" />
+                    Tandai semua sudah dibaca
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

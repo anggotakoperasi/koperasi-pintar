@@ -129,6 +129,7 @@ export default function Home() {
           onMobileMenuOpen={() => setMobileMenuOpen(true)}
           onLogout={handleLogout}
           onSearchSelect={handleGlobalSearch}
+          onNavigate={setActiveMenu}
         />
         <div className="p-4 lg:p-6">{renderPage()}</div>
       </main>
