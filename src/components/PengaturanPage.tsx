@@ -82,7 +82,7 @@ function loadSettings() {
   }
 }
 
-export default function PengaturanPage() {
+export default function PengaturanPage({ highlightKey }: { highlightKey?: string | null } = {}) {
   const [activeModal, setActiveModal] = useState<ModalId>(null);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -484,7 +484,7 @@ export default function PengaturanPage() {
         })}
       </div>
 
-      <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 p-6">
+      <div className={`bg-navy-900/80 rounded-2xl border border-navy-700/30 p-6${highlightKey === "pengaturan-backup" ? " animate-notif-highlight" : ""}`}>
         <div className="flex items-center gap-2 mb-4">
           <Info className="w-5 h-5 text-accent-400" />
           <h3 className="text-base font-semibold text-white">Informasi Sistem</h3>

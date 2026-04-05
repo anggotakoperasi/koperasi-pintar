@@ -91,9 +91,10 @@ function formatTanggalLengkap(val: string): string {
 
 interface PotonganPageProps {
   activeTab?: string;
+  highlightKey?: string | null;
 }
 
-export default function PotonganPage({ activeTab = "potongan" }: PotonganPageProps) {
+export default function PotonganPage({ activeTab = "potongan", highlightKey }: PotonganPageProps) {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("semua");
   const [filterBulan, setFilterBulan] = useState<string>("");
@@ -925,7 +926,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
       </DetailPopup>
 
       {/* Dashboard stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4${highlightKey === "potongan-terkirim" ? " animate-notif-highlight" : ""}`}>
         <StatCard title="Total Potongan" value={formatRupiah(totalPotongan)} icon={Receipt} color="blue" />
         <StatCard title="Terkirim" value={terkirim.toString()} subtitle="potongan berhasil" icon={CheckCircle2} color="green" />
         <div className="bg-navy-900/80 rounded-2xl p-4 lg:p-5 border border-warning-500/20 hover:border-opacity-50 transition-all">

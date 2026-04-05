@@ -45,7 +45,7 @@ const emptyForm = () => ({
   keterangan: "",
 });
 
-export default function SimpananPage() {
+export default function SimpananPage({ highlightKey }: { highlightKey?: string | null }) {
   const [search, setSearch] = useState("");
   const [filterJenis, setFilterJenis] = useState<string>("semua");
   const [anggotaList, setAnggotaList] = useState<Anggota[]>([]);
@@ -476,7 +476,7 @@ export default function SimpananPage() {
         )}
       </DetailPopup>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4${highlightKey === "simpanan-setoran" ? " animate-notif-highlight" : ""}`}>
         <StatCard title="Total Simpanan" value={formatRupiah(totalSimpananAll)} icon={Wallet} color="blue" />
         <StatCard title="Total Setoran" value={formatRupiah(totalSetoran)} icon={ArrowUpCircle} color="green" />
         <StatCard title="Total Pengambilan" value={formatRupiah(totalPengambilan)} icon={ArrowDownCircle} color="amber" />

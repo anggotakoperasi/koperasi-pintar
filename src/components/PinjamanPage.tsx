@@ -77,7 +77,7 @@ function hitungAngsuranPerBulan(
   return Math.round(angsuranPokok + bungaPerBulan);
 }
 
-export default function PinjamanPage() {
+export default function PinjamanPage({ highlightKey }: { highlightKey?: string | null }) {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("semua");
   const [pinjamanList, setPinjamanList] = useState<Pinjaman[]>([]);
@@ -573,7 +573,7 @@ export default function PinjamanPage() {
         )}
       </DetailPopup>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4${highlightKey === "pinjaman-baru" ? " animate-notif-highlight" : ""}`}>
         <StatCard title="Total Disalurkan" value={formatRupiah(totalDisalurkan)} icon={Banknote} color="blue" />
         <StatCard title="Sisa Pinjaman" value={formatRupiah(totalSisa)} icon={HandCoins} color="amber" />
         <StatCard title="Pinjaman Lancar" value={`${lancar} / ${pinjamanList.length}`} icon={CheckCircle2} color="green" />

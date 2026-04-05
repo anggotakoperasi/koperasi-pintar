@@ -86,9 +86,10 @@ const inputClass =
 interface AnggotaPageProps {
   globalSelectedAnggota?: Anggota | null;
   onGlobalSelectedClear?: () => void;
+  highlightKey?: string | null;
 }
 
-export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedClear }: AnggotaPageProps = {}) {
+export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedClear, highlightKey }: AnggotaPageProps = {}) {
   const [search, setSearch] = useState("");
   const [filterTier, setFilterTier] = useState<string>("semua");
   const [selectedAnggota, setSelectedAnggota] = useState<string | null>(null);
@@ -620,7 +621,7 @@ export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedCle
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4${highlightKey === "anggota-baru" ? " animate-notif-highlight" : ""}`}>
         <StatCard title="Total Anggota" value={anggotaList.length.toString()} icon={Users} color="blue" />
         <StatCard title="Anggota Aktif" value={aktif.toString()} icon={UserCheck} color="green" />
         <StatCard title="Anggota Non-Aktif" value={pasif.toString()} icon={UserX} color="amber" />

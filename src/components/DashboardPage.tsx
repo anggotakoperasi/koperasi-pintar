@@ -45,7 +45,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function DashboardPage() {
+export default function DashboardPage({ highlightKey }: { highlightKey?: string | null } = {}) {
   const [anggotaList, setAnggotaList] = useState<Anggota[]>([]);
   const [pinjamanList, setPinjamanList] = useState<Pinjaman[]>([]);
   const [loading, setLoading] = useState(true);

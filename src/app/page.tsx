@@ -54,10 +54,19 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [globalSelectedAnggota, setGlobalSelectedAnggota] = useState<Anggota | null>(null);
+  const [highlightKey, setHighlightKey] = useState<string | null>(null);
 
   const handleGlobalSearch = useCallback((anggota: Anggota) => {
     setActiveMenu("anggota");
     setGlobalSelectedAnggota(anggota);
+  }, []);
+
+  const handleNotifNavigate = useCallback((menuId: string, hKey?: string) => {
+    setActiveMenu(menuId);
+    if (hKey) {
+      setHighlightKey(hKey);
+      setTimeout(() => setHighlightKey(null), 2500);
+    }
   }, []);
 
   useEffect(() => { setHydrated(true); }, []);
@@ -91,21 +100,21 @@ export default function Home() {
 
   const renderPage = () => {
     switch (activeMenu) {
-      case "dashboard": return <DashboardPage />;
-      case "anggota": return <AnggotaPage globalSelectedAnggota={globalSelectedAnggota} onGlobalSelectedClear={() => setGlobalSelectedAnggota(null)} />;
-      case "simpanan": return <SimpananPage />;
-      case "pinjaman": return <PinjamanPage />;
+      case "dashboard": return <DashboardPage highlightKey={highlightKey} />;
+      case "anggota": return <AnggotaPage globalSelectedAnggota={globalSelectedAnggota} onGlobalSelectedClear={() => setGlobalSelectedAnggota(null)} highlightKey={highlightKey} />;
+      case "simpanan": return <SimpananPage highlightKey={highlightKey} />;
+      case "pinjaman": return <PinjamanPage highlightKey={highlightKey} />;
       case "potongan":
       case "potongan_kelola":
       case "potongan_cetak":
       case "potongan_rekap":
       case "potongan_koreksi":
       case "potongan_riwayat":
-        return <PotonganPage activeTab={activeMenu} />;
+        return <PotonganPage activeTab={activeMenu} highlightKey={highlightKey} />;
       case "shu": return <SHUPage />;
       case "laporan": return <LaporanPage />;
-      case "pengaturan": return <PengaturanPage />;
-      default: return <DashboardPage />;
+      case "pengaturan": return <PengaturanPage highlightKey={highlightKey} />;
+      default: return <DashboardPage highlightKey={highlightKey} />;
     }
   };
 
@@ -129,7 +138,7 @@ export default function Home() {
           onMobileMenuOpen={() => setMobileMenuOpen(true)}
           onLogout={handleLogout}
           onSearchSelect={handleGlobalSearch}
-          onNavigate={setActiveMenu}
+          onNavigate={handleNotifNavigate}
         />
         <div className="p-4 lg:p-6">{renderPage()}</div>
       </main>

@@ -12,14 +12,15 @@ export interface NotifItem {
   time: string;
   unread: boolean;
   target?: string;
+  highlightKey?: string;
 }
 
 const INITIAL_NOTIFS: NotifItem[] = [
-  { id: "n1", msg: "Pinjaman baru diajukan oleh BRIPKA AHMAD SURYANA", time: "5 menit lalu", unread: true, target: "pinjaman" },
-  { id: "n2", msg: "Setoran simpanan wajib berhasil diproses", time: "1 jam lalu", unread: true, target: "simpanan" },
-  { id: "n3", msg: "Potongan bulan Maret 2026 telah dikirim", time: "3 jam lalu", unread: true, target: "potongan" },
-  { id: "n4", msg: "Backup otomatis berhasil dilakukan", time: "1 hari lalu", unread: false, target: "pengaturan" },
-  { id: "n5", msg: "Anggota baru terdaftar: BRIPTU HENDRA", time: "2 hari lalu", unread: false, target: "anggota" },
+  { id: "n1", msg: "Pinjaman baru diajukan oleh BRIPKA AHMAD SURYANA", time: "5 menit lalu", unread: true, target: "pinjaman", highlightKey: "pinjaman-baru" },
+  { id: "n2", msg: "Setoran simpanan wajib berhasil diproses", time: "1 jam lalu", unread: true, target: "simpanan", highlightKey: "simpanan-setoran" },
+  { id: "n3", msg: "Potongan bulan Maret 2026 telah dikirim", time: "3 jam lalu", unread: true, target: "potongan", highlightKey: "potongan-terkirim" },
+  { id: "n4", msg: "Backup otomatis berhasil dilakukan", time: "1 hari lalu", unread: false, target: "pengaturan", highlightKey: "pengaturan-backup" },
+  { id: "n5", msg: "Anggota baru terdaftar: BRIPTU HENDRA", time: "2 hari lalu", unread: false, target: "anggota", highlightKey: "anggota-baru" },
 ];
 
 interface HeaderProps {
@@ -29,7 +30,7 @@ interface HeaderProps {
   onMobileMenuOpen: () => void;
   onLogout: () => void;
   onSearchSelect?: (anggota: Anggota) => void;
-  onNavigate?: (menuId: string) => void;
+  onNavigate?: (menuId: string, highlightKey?: string) => void;
 }
 
 export default function Header({
@@ -143,7 +144,7 @@ export default function Header({
   const handleNotifClick = (notif: NotifItem) => {
     setNotifs((prev) => prev.map((n) => (n.id === notif.id ? { ...n, unread: false } : n)));
     if (notif.target && onNavigate) {
-      onNavigate(notif.target);
+      onNavigate(notif.target, notif.highlightKey);
     }
     setNotifOpen(false);
   };
