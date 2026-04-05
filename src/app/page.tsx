@@ -96,11 +96,11 @@ export default function Home() {
       case "simpanan": return <SimpananPage />;
       case "pinjaman": return <PinjamanPage />;
       case "potongan":
+      case "potongan_kelola":
       case "potongan_cetak":
-      case "potongan_struk":
       case "potongan_rekap":
       case "potongan_koreksi":
-      case "potongan_rekapitulasi":
+      case "potongan_riwayat":
         return <PotonganPage activeTab={activeMenu} />;
       case "shu": return <SHUPage />;
       case "laporan": return <LaporanPage />;
