@@ -81,6 +81,14 @@ function formatTanggal(val: string): string {
   } catch { return val; }
 }
 
+function formatTanggalLengkap(val: string): string {
+  if (!val) return "";
+  try {
+    const d = new Date(val + "T12:00:00");
+    return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  } catch { return val; }
+}
+
 interface PotonganPageProps {
   activeTab?: string;
 }
@@ -1148,7 +1156,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="text-lg font-bold text-white mb-1">Koreksi Potongan</h3>
-              <p className="text-sm text-white mb-2">{koreksiItem.namaAnggota}</p>
+              <p className="text-sm text-white mb-2">{koreksiItem.namaAnggota} — {formatTanggalLengkap(koreksiPeriode || labelToDate(koreksiItem.bulan))}</p>
               <DatePickerID value={koreksiPeriode || labelToDate(koreksiItem.bulan)} onChange={setKoreksiPeriode} />
             </div>
             <div className="flex items-center gap-1.5">
