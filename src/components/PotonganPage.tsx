@@ -47,7 +47,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   const [prosesPopup, setProsesPopup] = useState(false);
   const [koreksiItem, setKoreksiItem] = useState<Potongan | null>(null);
   const [koreksiSaved, setKoreksiSaved] = useState(false);
-  const [cetakBulan, setCetakBulan] = useState(() => new Date().toISOString().slice(0, 7));
+  const [cetakBulan, setCetakBulan] = useState<string>("");
   const [cetakStatus, setCetakStatus] = useState<string>("semua");
   const [koreksiSearch, setKoreksiSearch] = useState("");
   const [koreksiTab, setKoreksiTab] = useState<"simpanan" | "pinjaman">("simpanan");
@@ -139,29 +139,19 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
     return Object.values(map).sort((a, b) => b.bulan.localeCompare(a.bulan));
   }, [potonganList]);
 
-  const bulanNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-
-  function monthInputToLabel(val: string): string {
-    if (!val) return "";
-    try {
-      const [y, m] = val.split("-");
-      return `${bulanNames[parseInt(m) - 1]} ${y}`;
-    } catch { return val; }
-  }
+  const availableBulans = useMemo(() => {
+    const set = new Set<string>();
+    potonganList.forEach((p) => set.add(p.bulan));
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [potonganList]);
 
   const cetakFiltered = useMemo(() => {
-    const label = monthInputToLabel(cetakBulan);
     return potonganList.filter((p) => {
-      const matchBulan = !cetakBulan || p.bulan === label;
+      const matchBulan = !cetakBulan || p.bulan === cetakBulan;
       const matchStatus = cetakStatus === "semua" || p.status === cetakStatus;
       return matchBulan && matchStatus;
     });
   }, [potonganList, cetakBulan, cetakStatus]);
-
-  function fmtBulanLabel(b: string) {
-    if (!b) return "-";
-    return monthInputToLabel(b);
-  }
 
   const handleCetakDaftarPotongan = () => {
     const data = cetakFiltered;
@@ -169,7 +159,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
     const totalAP = data.reduce((s, p) => s + p.angsuranPinjaman, 0);
     const totalJP = data.reduce((s, p) => s + p.jasaPinjaman, 0);
     const totalAll = data.reduce((s, p) => s + p.totalPotongan, 0);
-    const periodeLabel = cetakBulan ? fmtBulanLabel(cetakBulan) : "Semua Periode";
+    const periodeLabel = cetakBulan || "Semua Periode";
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -298,7 +288,12 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Periode Bulan</label>
-              <input type="month" value={cetakBulan} onChange={(e) => setCetakBulan(e.target.value)} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+              <select value={cetakBulan} onChange={(e) => setCetakBulan(e.target.value)} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none cursor-pointer">
+                <option value="">Semua Periode ({potonganList.length} data)</option>
+                {availableBulans.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Status</label>
@@ -323,7 +318,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
         <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 overflow-hidden">
           <div className="p-5 border-b border-navy-700/30">
             <h3 className="text-base font-semibold text-white">
-              Preview Data — {cetakBulan ? fmtBulanLabel(cetakBulan) : "Semua Periode"}
+              Preview Data — {cetakBulan || "Semua Periode"}
             </h3>
             <p className="text-sm text-navy-400 mt-1">
               <span className="text-white font-medium">{cetakFiltered.length}</span> data potongan ditemukan
