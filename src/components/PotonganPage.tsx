@@ -139,9 +139,20 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
     return Object.values(map).sort((a, b) => b.bulan.localeCompare(a.bulan));
   }, [potonganList]);
 
+  const bulanNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+  function monthInputToLabel(val: string): string {
+    if (!val) return "";
+    try {
+      const [y, m] = val.split("-");
+      return `${bulanNames[parseInt(m) - 1]} ${y}`;
+    } catch { return val; }
+  }
+
   const cetakFiltered = useMemo(() => {
+    const label = monthInputToLabel(cetakBulan);
     return potonganList.filter((p) => {
-      const matchBulan = !cetakBulan || p.bulan === cetakBulan;
+      const matchBulan = !cetakBulan || p.bulan === label;
       const matchStatus = cetakStatus === "semua" || p.status === cetakStatus;
       return matchBulan && matchStatus;
     });
@@ -149,11 +160,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
 
   function fmtBulanLabel(b: string) {
     if (!b) return "-";
-    try {
-      const [y, m] = b.split("-");
-      const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-      return `${months[parseInt(m) - 1]} ${y}`;
-    } catch { return b; }
+    return monthInputToLabel(b);
   }
 
   const handleCetakDaftarPotongan = () => {
