@@ -21,25 +21,26 @@ export default function DatePickerID({ value, onChange, className = "", placehol
     return value;
   }, [value]);
 
+  const openPicker = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    try { el.showPicker(); } catch { el.click(); }
+  };
+
   return (
-    <div className={`relative ${className}`}>
-      <div
-        onClick={() => inputRef.current?.showPicker?.()}
-        className="flex items-center gap-2 w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm cursor-pointer select-none"
-      >
-        <Calendar className="w-4 h-4 text-navy-400 shrink-0" />
-        {display ? (
-          <span className="text-white">{display}</span>
-        ) : (
-          <span className="text-navy-500">{placeholder}</span>
-        )}
+    <div className={`relative cursor-pointer ${className}`} onClick={openPicker}>
+      <div className="flex items-center justify-between w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm pointer-events-none select-none">
+        <span className={display ? "text-white" : "text-navy-500"}>
+          {display || placeholder}
+        </span>
+        <Calendar className="w-4 h-4 text-navy-400 shrink-0 ml-2" />
       </div>
       <input
         ref={inputRef}
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        className="sr-only"
         tabIndex={-1}
       />
     </div>
