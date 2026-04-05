@@ -272,19 +272,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </button>
           </form>
 
-          {/* Demo helper */}
-          <div className="mt-5 pt-5 border-t border-navy-700/40">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-navy-400">Mode demo — isi otomatis</p>
-              <button
-                type="button"
-                onClick={fillDemo}
-                className="text-xs font-medium text-accent-400 hover:text-accent-300 transition-colors cursor-pointer px-3 py-1.5 rounded-lg hover:bg-accent-500/10"
-              >
-                Isi Akun Demo
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
