@@ -47,6 +47,8 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   const [prosesPopup, setProsesPopup] = useState(false);
   const [koreksiItem, setKoreksiItem] = useState<Potongan | null>(null);
   const [koreksiSaved, setKoreksiSaved] = useState(false);
+  const [cetakBulan, setCetakBulan] = useState(() => new Date().toISOString().slice(0, 7));
+  const [cetakStatus, setCetakStatus] = useState<string>("semua");
   const [koreksiSearch, setKoreksiSearch] = useState("");
   const [koreksiTab, setKoreksiTab] = useState<"simpanan" | "pinjaman">("simpanan");
   const [simpananRows, setSimpananRows] = useState([
@@ -137,6 +139,102 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
     return Object.values(map).sort((a, b) => b.bulan.localeCompare(a.bulan));
   }, [potonganList]);
 
+  const cetakFiltered = useMemo(() => {
+    return potonganList.filter((p) => {
+      const matchBulan = !cetakBulan || p.bulan === cetakBulan;
+      const matchStatus = cetakStatus === "semua" || p.status === cetakStatus;
+      return matchBulan && matchStatus;
+    });
+  }, [potonganList, cetakBulan, cetakStatus]);
+
+  function fmtBulanLabel(b: string) {
+    if (!b) return "-";
+    try {
+      const [y, m] = b.split("-");
+      const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+      return `${months[parseInt(m) - 1]} ${y}`;
+    } catch { return b; }
+  }
+
+  const handleCetakDaftarPotongan = () => {
+    const data = cetakFiltered;
+    const totalSW = data.reduce((s, p) => s + p.simpananWajib, 0);
+    const totalAP = data.reduce((s, p) => s + p.angsuranPinjaman, 0);
+    const totalJP = data.reduce((s, p) => s + p.jasaPinjaman, 0);
+    const totalAll = data.reduce((s, p) => s + p.totalPotongan, 0);
+    const periodeLabel = cetakBulan ? fmtBulanLabel(cetakBulan) : "Semua Periode";
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Daftar Potongan - ${periodeLabel}</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; color: #111; }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  h2 { font-size: 13px; color: #666; margin-bottom: 16px; font-weight: normal; }
+  .org { font-size: 14px; color: #333; margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { background: #f0f0f0; border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-weight: 600; }
+  td { border: 1px solid #ddd; padding: 5px 8px; }
+  tr:nth-child(even) { background: #fafafa; }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .bold { font-weight: 700; }
+  .summary { margin-top: 16px; font-size: 12px; }
+  .summary span { font-weight: 600; }
+  tfoot td { font-weight: 700; border-top: 2px solid #333; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+<p class="org">PRIMKOPPOL RESOR SUBANG</p>
+<h1>DAFTAR POTONGAN GAJI ANGGOTA</h1>
+<h2>Periode: ${periodeLabel}${cetakStatus !== "semua" ? ` — Status: ${statusLabel(cetakStatus)}` : ""} — Dicetak: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</h2>
+<table>
+  <thead><tr>
+    <th>No</th><th>Nama Anggota</th><th>ID Anggota</th><th>Bulan</th>
+    <th class="text-right">Simp. Wajib</th><th class="text-right">Angs. Pinjaman</th>
+    <th class="text-right">Jasa Pinjaman</th><th class="text-right">Total Potongan</th>
+    <th class="text-center">Status</th>
+  </tr></thead>
+  <tbody>${data.map((p, i) => `<tr>
+    <td>${i + 1}</td><td>${p.namaAnggota}</td><td>${p.anggotaId}</td><td>${p.bulan}</td>
+    <td class="text-right">${formatRupiah(p.simpananWajib)}</td>
+    <td class="text-right">${formatRupiah(p.angsuranPinjaman)}</td>
+    <td class="text-right">${formatRupiah(p.jasaPinjaman)}</td>
+    <td class="text-right bold">${formatRupiah(p.totalPotongan)}</td>
+    <td class="text-center">${statusLabel(p.status)}</td>
+  </tr>`).join("")}</tbody>
+  <tfoot><tr>
+    <td colspan="4">TOTAL (${data.length} anggota)</td>
+    <td class="text-right">${formatRupiah(totalSW)}</td>
+    <td class="text-right">${formatRupiah(totalAP)}</td>
+    <td class="text-right">${formatRupiah(totalJP)}</td>
+    <td class="text-right">${formatRupiah(totalAll)}</td>
+    <td></td>
+  </tr></tfoot>
+</table>
+<div class="summary">
+  <p>Total Simpanan Wajib: <span>${formatRupiah(totalSW)}</span></p>
+  <p>Total Angsuran Pinjaman: <span>${formatRupiah(totalAP)}</span></p>
+  <p>Total Jasa Pinjaman: <span>${formatRupiah(totalJP)}</span></p>
+  <p>Grand Total Potongan: <span>${formatRupiah(totalAll)}</span></p>
+</div>
+</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 300);
+  };
+
+  const handleExportCetak = () => {
+    const data = cetakFiltered;
+    const headers = ["No", "Nama Anggota", "ID Anggota", "Bulan", "Simp Wajib", "Angs Pinjaman", "Jasa Pinjaman", "Total Potongan", "Status"];
+    const rows = data.map((p, i) => [
+      String(i + 1), p.namaAnggota, p.anggotaId, p.bulan,
+      String(p.simpananWajib), String(p.angsuranPinjaman), String(p.jasaPinjaman),
+      String(p.totalPotongan), statusLabel(p.status),
+    ]);
+    exportCSV(headers, rows, `daftar-potongan-${cetakBulan || "semua"}.csv`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -178,6 +276,11 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   };
 
   if (activeTab === "potongan_cetak") {
+    const cetakTotalSW = cetakFiltered.reduce((s, p) => s + p.simpananWajib, 0);
+    const cetakTotalAP = cetakFiltered.reduce((s, p) => s + p.angsuranPinjaman, 0);
+    const cetakTotalJP = cetakFiltered.reduce((s, p) => s + p.jasaPinjaman, 0);
+    const cetakTotalAll = cetakFiltered.reduce((s, p) => s + p.totalPotongan, 0);
+
     return (
       <div className="space-y-6">
         <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 p-6">
@@ -188,28 +291,89 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Periode Bulan</label>
-              <input type="month" defaultValue={new Date().toISOString().slice(0, 7)} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+              <input type="month" value={cetakBulan} onChange={(e) => setCetakBulan(e.target.value)} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
             </div>
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Status</label>
-              <select className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none cursor-pointer">
+              <select value={cetakStatus} onChange={(e) => setCetakStatus(e.target.value)} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none cursor-pointer">
                 <option value="semua">Semua Status</option>
                 <option value="terkirim">Terkirim</option>
                 <option value="proses">Proses</option>
+                <option value="gagal">Gagal</option>
               </select>
             </div>
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={() => window.print()} className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
+            <button type="button" onClick={handleCetakDaftarPotongan} disabled={cetakFiltered.length === 0} className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
               <Printer className="w-4 h-4" /> Cetak Daftar Potongan
             </button>
-            <button type="button" onClick={handleExport} className="flex items-center gap-2 bg-navy-700 hover:bg-navy-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
+            <button type="button" onClick={handleExportCetak} disabled={cetakFiltered.length === 0} className="flex items-center gap-2 bg-navy-700 hover:bg-navy-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
               <FileDown className="w-4 h-4" /> Export CSV
             </button>
           </div>
         </div>
-        <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 p-5">
-          <p className="text-sm text-navy-400">Menampilkan <span className="text-white font-medium">{potonganList.length}</span> data potongan. Pilih periode dan klik Cetak untuk mencetak.</p>
+
+        <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 overflow-hidden">
+          <div className="p-5 border-b border-navy-700/30">
+            <h3 className="text-base font-semibold text-white">
+              Preview Data — {cetakBulan ? fmtBulanLabel(cetakBulan) : "Semua Periode"}
+            </h3>
+            <p className="text-sm text-navy-400 mt-1">
+              <span className="text-white font-medium">{cetakFiltered.length}</span> data potongan ditemukan
+              {cetakStatus !== "semua" && <> — Status: <span className="text-white font-medium">{statusLabel(cetakStatus)}</span></>}
+            </p>
+          </div>
+
+          {cetakFiltered.length > 0 ? (
+            <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+              <table className="w-full">
+                <thead className="bg-navy-800/80 sticky top-0">
+                  <tr className="border-b border-navy-600/40">
+                    <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">No</th>
+                    <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Nama Anggota</th>
+                    <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">ID</th>
+                    <th className="text-left text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Bulan</th>
+                    <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Simp. Wajib</th>
+                    <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Angs. Pinjaman</th>
+                    <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Jasa Pinjaman</th>
+                    <th className="text-right text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Total</th>
+                    <th className="text-center text-xs font-semibold text-navy-200 uppercase tracking-wider px-5 py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cetakFiltered.map((p, i) => (
+                    <tr key={p.id} className="border-b border-navy-800/50 hover:bg-navy-800/30 transition-colors">
+                      <td className="px-5 py-3 text-sm text-navy-300">{i + 1}</td>
+                      <td className="px-5 py-3 text-sm font-medium text-white">{p.namaAnggota}</td>
+                      <td className="px-5 py-3 text-sm text-navy-300">{p.anggotaId}</td>
+                      <td className="px-5 py-3 text-sm text-navy-300">{p.bulan}</td>
+                      <td className="px-5 py-3 text-sm text-white text-right">{formatRupiah(p.simpananWajib)}</td>
+                      <td className="px-5 py-3 text-sm text-white text-right">{formatRupiah(p.angsuranPinjaman)}</td>
+                      <td className="px-5 py-3 text-sm text-white text-right">{formatRupiah(p.jasaPinjaman)}</td>
+                      <td className="px-5 py-3 text-sm text-accent-400 text-right font-bold">{formatRupiah(p.totalPotongan)}</td>
+                      <td className="px-5 py-3 text-center">{statusBadge(p.status)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-navy-600">
+                    <td colSpan={4} className="px-5 py-3 text-sm font-bold text-white">TOTAL ({cetakFiltered.length} anggota)</td>
+                    <td className="px-5 py-3 text-sm font-bold text-white text-right">{formatRupiah(cetakTotalSW)}</td>
+                    <td className="px-5 py-3 text-sm font-bold text-white text-right">{formatRupiah(cetakTotalAP)}</td>
+                    <td className="px-5 py-3 text-sm font-bold text-white text-right">{formatRupiah(cetakTotalJP)}</td>
+                    <td className="px-5 py-3 text-sm font-bold text-accent-400 text-right">{formatRupiah(cetakTotalAll)}</td>
+                    <td className="px-5 py-3"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : (
+            <div className="p-12 text-center">
+              <Receipt className="w-12 h-12 mx-auto mb-3 text-navy-400 opacity-50" />
+              <p className="text-base font-medium text-navy-300">Tidak ada data potongan</p>
+              <p className="text-sm text-navy-400">Ubah periode bulan atau filter status untuk menampilkan data</p>
+            </div>
+          )}
         </div>
       </div>
     );
