@@ -17,10 +17,10 @@ import {
   LogOut,
   X,
   Printer,
-  FileCheck,
   ClipboardList,
   PenLine,
   ListChecks,
+  History,
 } from "lucide-react";
 
 interface SubMenuItem {
@@ -54,11 +54,11 @@ const menuItems: MenuItem[] = [
   {
     id: "potongan", label: "Daftar Potongan", icon: Receipt,
     children: [
-      { id: "potongan_cetak", label: "Pencetakan Daftar Potongan", icon: Printer },
-      { id: "potongan_struk", label: "Pencetakan Struk Potongan", icon: FileCheck },
-      { id: "potongan_rekap", label: "Rekap Daftar Potongan", icon: ClipboardList },
-      { id: "potongan_koreksi", label: "Koreksi Daftar Potongan", icon: PenLine },
-      { id: "potongan_rekapitulasi", label: "Daftar Potongan (Rekapitulasi)", icon: FileText },
+      { id: "potongan_kelola", label: "Kelola Daftar Potongan", icon: ListChecks },
+      { id: "potongan_rekap", label: "Rekapitulasi Potongan", icon: ClipboardList },
+      { id: "potongan_cetak", label: "Pencetakan", icon: Printer },
+      { id: "potongan_koreksi", label: "Koreksi / Penyesuaian", icon: PenLine },
+      { id: "potongan_riwayat", label: "Riwayat Transaksi", icon: History },
     ],
   },
   { id: "shu", label: "SHU", icon: PieChart },
