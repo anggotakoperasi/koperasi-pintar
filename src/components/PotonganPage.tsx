@@ -49,6 +49,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   const [koreksiSaved, setKoreksiSaved] = useState(false);
   const [cetakBulan, setCetakBulan] = useState<string>("");
   const [cetakStatus, setCetakStatus] = useState<string>("semua");
+  const [cetakSearch, setCetakSearch] = useState<string>("");
   const [koreksiSearch, setKoreksiSearch] = useState("");
   const [koreksiTab, setKoreksiTab] = useState<"simpanan" | "pinjaman">("simpanan");
   const [simpananRows, setSimpananRows] = useState([
@@ -146,12 +147,14 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   }, [potonganList]);
 
   const cetakFiltered = useMemo(() => {
+    const q = cetakSearch.toLowerCase();
     return potonganList.filter((p) => {
       const matchBulan = !cetakBulan || p.bulan === cetakBulan;
       const matchStatus = cetakStatus === "semua" || p.status === cetakStatus;
-      return matchBulan && matchStatus;
+      const matchSearch = !q || p.namaAnggota.toLowerCase().includes(q) || p.anggotaId.toLowerCase().includes(q);
+      return matchBulan && matchStatus && matchSearch;
     });
-  }, [potonganList, cetakBulan, cetakStatus]);
+  }, [potonganList, cetakBulan, cetakStatus, cetakSearch]);
 
   const handleCetakDaftarPotongan = () => {
     const data = cetakFiltered;
@@ -285,14 +288,15 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
             <div className="w-12 h-12 rounded-xl bg-accent-500/20 flex items-center justify-center"><Printer className="w-6 h-6 text-accent-400" /></div>
             <div><h3 className="text-lg font-bold text-white">Pencetakan Daftar Potongan</h3><p className="text-sm text-navy-400">Cetak daftar potongan per periode bulan</p></div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Periode Bulan</label>
               <select value={cetakBulan} onChange={(e) => setCetakBulan(e.target.value)} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none cursor-pointer">
-                <option value="">Semua Periode ({potonganList.length} data)</option>
-                {availableBulans.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
+                <option value="">Semua Periode</option>
+                {availableBulans.map((b) => {
+                  const count = potonganList.filter((p) => p.bulan === b).length;
+                  return <option key={b} value={b}>{b} ({count} data)</option>;
+                })}
               </select>
             </div>
             <div>
@@ -303,6 +307,10 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
                 <option value="proses">Proses</option>
                 <option value="gagal">Gagal</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Cari Anggota</label>
+              <input type="text" placeholder="Ketik nama anggota..." value={cetakSearch} onChange={(e) => setCetakSearch(e.target.value)} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white placeholder-navy-400 outline-none" />
             </div>
           </div>
           <div className="flex gap-3">
