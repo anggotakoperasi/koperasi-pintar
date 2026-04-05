@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Bell, Search, User, Calendar, Menu, LogOut, ChevronDown, Loader2, CheckCheck } from "lucide-react";
+import { Bell, Search, User, Calendar, Menu, LogOut, ChevronDown, Loader2, CheckCheck, Monitor, Globe, Clock } from "lucide-react";
 import type { UserSession } from "./LoginPage";
 import type { Anggota } from "@/data/mock";
 import { searchAnggota } from "@/lib/fetchers";
@@ -348,6 +348,30 @@ export default function Header({
                     <p className="text-xs text-navy-400 mt-0.5">@{user.username}</p>
                   </div>
                 </div>
+              </div>
+              <div className="px-4 py-3 border-b border-navy-700/50 space-y-2">
+                <p className="text-xs font-semibold text-navy-300 uppercase tracking-wider mb-2">Info Login Terakhir</p>
+                {user.loginAt && (
+                  <div className="flex items-start gap-2">
+                    <Clock className="w-3.5 h-3.5 text-navy-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-white">{new Date(user.loginAt).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}, {new Date(user.loginAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</p>
+                  </div>
+                )}
+                {user.device && (
+                  <div className="flex items-start gap-2">
+                    <Monitor className="w-3.5 h-3.5 text-navy-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-white">{user.device}</p>
+                  </div>
+                )}
+                {user.ip && (
+                  <div className="flex items-start gap-2">
+                    <Globe className="w-3.5 h-3.5 text-navy-400 mt-0.5 shrink-0" />
+                    <p className="text-xs text-white">IP: {user.ip}</p>
+                  </div>
+                )}
+                {!user.loginAt && !user.device && !user.ip && (
+                  <p className="text-xs text-navy-400">Belum tersedia</p>
+                )}
               </div>
               <div className="p-2">
                 <div className="px-3 py-2 text-xs text-navy-400 flex items-center gap-2">

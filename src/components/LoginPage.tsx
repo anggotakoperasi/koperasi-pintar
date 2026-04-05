@@ -22,6 +22,9 @@ export interface UserSession {
   nama: string;
   role: string;
   roleLabel: string;
+  loginAt?: string;
+  device?: string;
+  ip?: string;
 }
 
 interface LoginPageProps {
@@ -85,21 +88,43 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      const demo = demoAccounts[selectedRole];
-      if (demo && username === demo.username && password === demo.password) {
-        const roleObj = roles.find((r) => r.value === selectedRole)!;
-        onLogin({
-          username,
-          nama: demo.nama,
-          role: selectedRole,
-          roleLabel: roleObj.label,
-        });
-      } else {
-        setError("Username atau password salah. Coba gunakan akun demo.");
-        setIsLoading(false);
-      }
-    }, 800);
+    const ua = navigator.userAgent;
+    let deviceLabel = "Unknown";
+    if (/Mobile|Android/i.test(ua)) deviceLabel = "Mobile";
+    else if (/Tablet|iPad/i.test(ua)) deviceLabel = "Tablet";
+    else deviceLabel = "Desktop";
+    const browserMatch = ua.match(/(Chrome|Firefox|Safari|Edge|Opera)\/[\d.]+/);
+    if (browserMatch) deviceLabel += ` — ${browserMatch[1]}`;
+    const osMatch = ua.match(/\(([^)]+)\)/);
+    if (osMatch) {
+      const osPart = osMatch[1].split(";")[0].trim();
+      deviceLabel += ` (${osPart})`;
+    }
+
+    fetch("https://api.ipify.org?format=json")
+      .then((r) => r.json())
+      .then((data) => data.ip as string)
+      .catch(() => "Tidak diketahui")
+      .then((ip) => {
+        setTimeout(() => {
+          const demo = demoAccounts[selectedRole];
+          if (demo && username === demo.username && password === demo.password) {
+            const roleObj = roles.find((r) => r.value === selectedRole)!;
+            onLogin({
+              username,
+              nama: demo.nama,
+              role: selectedRole,
+              roleLabel: roleObj.label,
+              loginAt: new Date().toISOString(),
+              device: deviceLabel,
+              ip,
+            });
+          } else {
+            setError("Username atau password salah. Coba gunakan akun demo.");
+            setIsLoading(false);
+          }
+        }, 500);
+      });
   };
 
   const fillDemo = () => {
