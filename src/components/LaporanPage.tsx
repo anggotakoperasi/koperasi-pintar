@@ -128,10 +128,6 @@ const reportGenerators: Record<string, ReportGenerator> = {
       subtitle: `${grouped.size} satuan, ${aktif.length} anggota`,
       headers: ["No", "Satuan", "No. Anggota", "Nama", "Pangkat", "NRP/NIP"],
       rows,
-      summary: Array.from(grouped.entries())
-        .sort((a, b) => b[1].length - a[1].length)
-        .slice(0, 6)
-        .map(([s, m]) => ({ label: s, value: `${m.length} anggota` })),
     };
   },
 
