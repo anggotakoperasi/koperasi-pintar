@@ -25,6 +25,7 @@ import {
   Cell,
 } from "recharts";
 import StatCard from "./StatCard";
+import AiAssistant from "./AiAssistant";
 import { formatRupiah, getTierColor, getTierLabel } from "@/data/mock";
 import type { Anggota, Pinjaman } from "@/data/mock";
 import { fetchAnggota, fetchPinjaman } from "@/lib/fetchers";
@@ -97,6 +98,8 @@ export default function DashboardPage({ highlightKey }: { highlightKey?: string 
 
   return (
     <div className="space-y-6">
+      <AiAssistant />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           title="Total Anggota Aktif"
