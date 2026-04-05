@@ -23,6 +23,7 @@ import {
   insertTransaksiSimpanan,
 } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
+import DatePickerID from "./DatePickerID";
 
 type ModalJenis = "setoran" | "pengambilan" | null;
 
@@ -384,22 +385,9 @@ export default function SimpananPage() {
 
             <div className="flex flex-wrap gap-2 mb-4">
               <div className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-navy-400" />
-                <input
-                  type="date" lang="id-ID"
-                  value={detailDateFrom}
-                  onChange={(e) => setDetailDateFrom(e.target.value)}
-                  className="bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1 text-xs text-white outline-none"
-                  title="Dari tanggal"
-                />
+                <DatePickerID value={detailDateFrom} onChange={setDetailDateFrom} placeholder="Dari tanggal" />
                 <span className="text-navy-400 text-xs">s/d</span>
-                <input
-                  type="date" lang="id-ID"
-                  value={detailDateTo}
-                  onChange={(e) => setDetailDateTo(e.target.value)}
-                  className="bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1 text-xs text-white outline-none"
-                  title="Sampai tanggal"
-                />
+                <DatePickerID value={detailDateTo} onChange={setDetailDateTo} placeholder="Sampai tanggal" />
               </div>
               <div className="flex items-center gap-1.5">
                 <Filter className="w-3.5 h-3.5 text-navy-400" />

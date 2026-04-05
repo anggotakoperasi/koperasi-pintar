@@ -30,6 +30,7 @@ import { formatRupiah } from "@/data/mock";
 import type { Potongan } from "@/data/mock";
 import { fetchPotongan, exportCSV } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
+import DatePickerID from "./DatePickerID";
 
 function statusLabel(s: string): string {
   switch (s) {
@@ -443,7 +444,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Periode</label>
-              <input type="date" lang="id-ID" value={filterBulan} onChange={(e) => setFilterBulan(e.target.value)} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+              <DatePickerID value={filterBulan} onChange={setFilterBulan} />
             </div>
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Status</label>
@@ -572,7 +573,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Periode</label>
-              <input type="date" lang="id-ID" value={rekapBulan} onChange={(e) => setRekapBulan(e.target.value)} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+              <DatePickerID value={rekapBulan} onChange={setRekapBulan} />
             </div>
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Cari Anggota</label>
@@ -710,7 +711,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
                 <div>
                   <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Periode</label>
                   <div className="flex gap-2">
-                    <input type="date" lang="id-ID" value={cetakBulan} onChange={(e) => setCetakBulan(e.target.value)} className="flex-1 bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+                    <DatePickerID value={cetakBulan} onChange={setCetakBulan} className="flex-1" />
                     {cetakBulan && <button type="button" onClick={() => setCetakBulan("")} className="px-3 py-2.5 bg-navy-700 hover:bg-navy-600 text-navy-300 rounded-xl text-xs transition-colors cursor-pointer" title="Semua periode"><XCircle className="w-4 h-4" /></button>}
                   </div>
                   {!cetakBulan && <p className="text-xs text-accent-400 mt-1">Menampilkan semua periode</p>}
@@ -952,7 +953,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
           <div className="flex flex-wrap gap-3 flex-1">
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1">Periode</label>
-              <input type="date" lang="id-ID" value={filterBulan} onChange={(e) => setFilterBulan(e.target.value)} className="bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2 text-sm text-white outline-none" />
+              <DatePickerID value={filterBulan} onChange={setFilterBulan} />
             </div>
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1">Cari</label>
@@ -1152,7 +1153,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
                 <button type="button" onClick={() => setKoreksiEditPeriode(!koreksiEditPeriode)} className="text-navy-400 hover:text-accent-400 transition-colors cursor-pointer" title="Ubah periode"><Calendar className="w-3.5 h-3.5" /></button>
               </div>
               {koreksiEditPeriode && (
-                <div className="mt-2"><input type="date" lang="id-ID" value={koreksiPeriode || labelToDate(koreksiItem.bulan)} onChange={(e) => setKoreksiPeriode(e.target.value)} className="bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-accent-500" /></div>
+                <div className="mt-2"><DatePickerID value={koreksiPeriode || labelToDate(koreksiItem.bulan)} onChange={setKoreksiPeriode} /></div>
               )}
             </div>
             <div className="flex items-center gap-1.5">

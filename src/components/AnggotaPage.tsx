@@ -24,6 +24,7 @@ import StatCard from "./StatCard";
 import { formatRupiah, getTierColor, getTierLabel } from "@/data/mock";
 import type { Anggota } from "@/data/mock";
 import { fetchAnggota, insertAnggota, updateAnggota, deleteAnggota, getMaxNomorAnggota } from "@/lib/fetchers";
+import DatePickerID from "./DatePickerID";
 
 const PANGKAT_OPTIONS: string[] = [
   "AKBP",
@@ -457,11 +458,9 @@ export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedCle
               </div>
               <div>
                 <label className="block text-xs font-medium text-navy-400 mb-1.5">Bergabung</label>
-                <input
-                  type="date" lang="id-ID"
+                <DatePickerID
                   value={addForm.bergabung}
-                  onChange={(e) => setAddForm((f) => ({ ...f, bergabung: e.target.value }))}
-                  className={inputClass}
+                  onChange={(val) => setAddForm((f) => ({ ...f, bergabung: val }))}
                 />
               </div>
               <div className="flex gap-2 pt-2">

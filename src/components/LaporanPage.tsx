@@ -30,6 +30,7 @@ import {
   fetchPotongan,
   exportCSV,
 } from "@/lib/fetchers";
+import DatePickerID from "./DatePickerID";
 
 interface ReportResult {
   title: string;
@@ -829,13 +830,7 @@ export default function LaporanPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <input
-              type="date"
-              lang="id-ID"
-              value={selectedBulan}
-              onChange={e => setSelectedBulan(e.target.value)}
-              className="bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-accent-500/50"
-            />
+            <DatePickerID value={selectedBulan} onChange={setSelectedBulan} />
           </div>
         </div>
 
