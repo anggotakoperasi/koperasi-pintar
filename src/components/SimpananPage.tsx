@@ -386,7 +386,7 @@ export default function SimpananPage() {
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-navy-400" />
                 <input
-                  type="date"
+                  type="date" lang="id-ID"
                   value={detailDateFrom}
                   onChange={(e) => setDetailDateFrom(e.target.value)}
                   className="bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1 text-xs text-white outline-none"
@@ -394,7 +394,7 @@ export default function SimpananPage() {
                 />
                 <span className="text-navy-400 text-xs">s/d</span>
                 <input
-                  type="date"
+                  type="date" lang="id-ID"
                   value={detailDateTo}
                   onChange={(e) => setDetailDateTo(e.target.value)}
                   className="bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1 text-xs text-white outline-none"

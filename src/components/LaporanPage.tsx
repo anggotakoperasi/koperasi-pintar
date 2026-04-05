@@ -830,7 +830,8 @@ export default function LaporanPage() {
           </div>
           <div className="flex items-center gap-2">
             <input
-              type="month"
+              type="date"
+              lang="id-ID"
               value={selectedBulan}
               onChange={e => setSelectedBulan(e.target.value)}
               className="bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-accent-500/50"

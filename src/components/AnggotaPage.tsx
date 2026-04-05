@@ -458,7 +458,7 @@ export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedCle
               <div>
                 <label className="block text-xs font-medium text-navy-400 mb-1.5">Bergabung</label>
                 <input
-                  type="date"
+                  type="date" lang="id-ID"
                   value={addForm.bergabung}
                   onChange={(e) => setAddForm((f) => ({ ...f, bergabung: e.target.value }))}
                   className={inputClass}
