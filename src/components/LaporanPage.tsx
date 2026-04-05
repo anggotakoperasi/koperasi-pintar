@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   FileText,
   Download,
@@ -20,6 +20,7 @@ import {
   Loader2,
   Eye,
   ChevronDown,
+  Search,
 } from "lucide-react";
 import { formatRupiah } from "@/data/mock";
 import type { Anggota, TransaksiSimpanan, Pinjaman, Potongan } from "@/data/mock";
@@ -728,6 +729,8 @@ const colorIcon: Record<string, string> = {
 export default function LaporanPage() {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<ReportResult | null>(null);
+  const [reportSearch, setReportSearch] = useState("");
+  const [reportFilter, setReportFilter] = useState("semua");
   const [dataLoaded, setDataLoaded] = useState(false);
   const [allAnggota, setAllAnggota] = useState<Anggota[]>([]);
   const [allTransaksi, setAllTransaksi] = useState<TransaksiSimpanan[]>([]);
@@ -765,7 +768,41 @@ export default function LaporanPage() {
     if (!generator) return;
     const result = generator(allAnggota, allTransaksi, allPinjaman, allPotongan, selectedBulan);
     setReport(result);
+    setReportSearch("");
+    setReportFilter("semua");
   };
+
+  const reportFilterOptions = useMemo(() => {
+    if (!report) return [];
+    const satuanIdx = report.headers.findIndex(h => h.toLowerCase() === "satuan");
+    if (satuanIdx < 0) return [];
+    const unique = [...new Set(report.rows.map(r => r[satuanIdx]).filter(Boolean))].sort();
+    return unique;
+  }, [report]);
+
+  const filteredRows = useMemo(() => {
+    if (!report) return [];
+    let rows = report.rows;
+    if (reportFilter !== "semua") {
+      const satuanIdx = report.headers.findIndex(h => h.toLowerCase() === "satuan");
+      if (satuanIdx >= 0) {
+        rows = rows.filter(r => r[satuanIdx] === reportFilter);
+      }
+    }
+    if (reportSearch.trim()) {
+      const q = reportSearch.toLowerCase();
+      rows = rows.filter(r => r.some(cell => cell.toLowerCase().includes(q)));
+    }
+    return rows;
+  }, [report, reportFilter, reportSearch]);
+
+  const filteredSummary = useMemo(() => {
+    if (!report || reportFilter === "semua") return report?.summary || [];
+    const satuanIdx = report.headers.findIndex(h => h.toLowerCase() === "satuan");
+    if (satuanIdx < 0) return report.summary || [];
+    const count = filteredRows.filter(r => r[0] !== "").length;
+    return [{ label: reportFilter, value: `${count} anggota` }];
+  }, [report, reportFilter, filteredRows]);
 
   const handleExportCSV = () => {
     if (!report) return;
@@ -962,8 +999,46 @@ export default function LaporanPage() {
               </div>
             </div>
 
+            {/* Filter Bar */}
+            <div className="px-5 py-3 border-b border-navy-700/50 flex flex-wrap gap-3 items-center bg-navy-800/20">
+              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                <Search className="w-4 h-4 text-navy-400 shrink-0" />
+                <input
+                  type="text"
+                  value={reportSearch}
+                  onChange={(e) => setReportSearch(e.target.value)}
+                  placeholder="Cari nama, NRP/NIP, no. anggota, pangkat..."
+                  className="bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2 text-sm text-white placeholder-navy-500 outline-none w-full focus:border-accent-500/50"
+                />
+              </div>
+              {reportFilterOptions.length > 0 && (
+                <select
+                  value={reportFilter}
+                  onChange={(e) => setReportFilter(e.target.value)}
+                  className="bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2 text-sm text-white outline-none cursor-pointer"
+                >
+                  <option value="semua">Semua Satuan</option>
+                  {reportFilterOptions.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              )}
+              {(reportSearch || reportFilter !== "semua") && (
+                <button
+                  type="button"
+                  onClick={() => { setReportSearch(""); setReportFilter("semua"); }}
+                  className="bg-navy-700 hover:bg-navy-600 text-white px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+              <p className="text-xs text-navy-400 ml-auto">
+                <span className="text-white font-medium">{filteredRows.length}</span> / {report.rows.length} data
+              </p>
+            </div>
+
             {/* Table */}
-            <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+            <div className="overflow-x-auto max-h-[55vh] overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0">
                   <tr className="bg-navy-800">
@@ -975,7 +1050,7 @@ export default function LaporanPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {report.rows.map((row, i) => (
+                  {filteredRows.map((row, i) => (
                     <tr key={i} className={`border-b border-navy-800/50 ${row[0] === "" ? "bg-navy-800/30 font-semibold" : "hover:bg-navy-800/30"}`}>
                       {row.map((cell, j) => (
                         <td key={j} className={`px-4 py-2.5 whitespace-nowrap ${row[0] === "" ? "text-accent-300 text-xs font-semibold" : "text-navy-200"}`}>
@@ -984,10 +1059,10 @@ export default function LaporanPage() {
                       ))}
                     </tr>
                   ))}
-                  {report.rows.length === 0 && (
+                  {filteredRows.length === 0 && (
                     <tr>
                       <td colSpan={report.headers.length} className="px-4 py-8 text-center text-navy-400 text-sm">
-                        Tidak ada data untuk laporan ini
+                        {reportSearch || reportFilter !== "semua" ? "Tidak ada data yang cocok dengan filter" : "Tidak ada data untuk laporan ini"}
                       </td>
                     </tr>
                   )}
@@ -996,10 +1071,10 @@ export default function LaporanPage() {
             </div>
 
             {/* Summary */}
-            {report.summary && report.summary.length > 0 && (
+            {filteredSummary && filteredSummary.length > 0 && (
               <div className="p-5 border-t border-navy-700/50 bg-navy-800/30">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {report.summary.map((s, i) => (
+                  {filteredSummary.map((s, i) => (
                     <div key={i} className="bg-navy-900/80 rounded-xl p-3 border border-navy-700/30">
                       <p className="text-xs text-navy-400">{s.label}</p>
                       <p className="text-sm font-bold text-white mt-1">{s.value}</p>
@@ -1011,7 +1086,7 @@ export default function LaporanPage() {
 
             {/* Footer info */}
             <div className="px-5 py-3 border-t border-navy-700/50 flex items-center justify-between">
-              <p className="text-xs text-navy-400">{report.rows.length} baris data</p>
+              <p className="text-xs text-navy-400">{filteredRows.length} baris data{reportFilter !== "semua" ? ` (${reportFilter})` : ""}</p>
               <p className="text-xs text-navy-400">
                 Periode: {bulanLabel} · Dicetak: {new Date().toLocaleDateString("id-ID")}
               </p>
