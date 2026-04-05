@@ -17,6 +17,8 @@ import {
   PenLine,
   AlertTriangle,
   Save,
+  Share2,
+  Calendar,
 } from "lucide-react";
 import StatCard from "./StatCard";
 import { formatRupiah } from "@/data/mock";
@@ -51,6 +53,8 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
   const [cetakStatus, setCetakStatus] = useState<string>("semua");
   const [cetakSearch, setCetakSearch] = useState<string>("");
   const [koreksiSearch, setKoreksiSearch] = useState("");
+  const [koreksiPeriode, setKoreksiPeriode] = useState<string>("");
+  const [koreksiEditPeriode, setKoreksiEditPeriode] = useState(false);
   const [koreksiTab, setKoreksiTab] = useState<"simpanan" | "pinjaman">("simpanan");
   const [simpananRows, setSimpananRows] = useState([
     { kode: "PO", jenis: "Pokok", saldo: 0, potongan: "", persen: "0" },
@@ -80,7 +84,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
         e.preventDefault();
         if (prosesPopup) { setProsesPopup(false); return; }
         if (gagalPopup) { setGagalPopup(false); return; }
-        if (koreksiItem) { setKoreksiItem(null); setKoreksiSaved(false); return; }
+        if (koreksiItem) { setKoreksiItem(null); setKoreksiSaved(false); setKoreksiPeriode(""); setKoreksiEditPeriode(false); return; }
         if (detailItem) setDetailItem(null);
       }
     }
@@ -140,16 +144,28 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
     return Object.values(map).sort((a, b) => b.bulan.localeCompare(a.bulan));
   }, [potonganList]);
 
-  const availableBulans = useMemo(() => {
-    const set = new Set<string>();
-    potonganList.forEach((p) => set.add(p.bulan));
-    return Array.from(set).sort((a, b) => b.localeCompare(a));
-  }, [potonganList]);
+  const bulanIdNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const bulanIdMap: Record<string, number> = { Januari: 1, Februari: 2, Maret: 3, April: 4, Mei: 5, Juni: 6, Juli: 7, Agustus: 8, September: 9, Oktober: 10, November: 11, Desember: 12 };
+
+  function monthToLabel(val: string): string {
+    if (!val) return "Semua Periode";
+    const [y, m] = val.split("-");
+    return `${bulanIdNames[parseInt(m) - 1]} ${y}`;
+  }
+
+  function labelToMonth(label: string): string {
+    const parts = label.split(" ");
+    if (parts.length < 2) return "";
+    const m = bulanIdMap[parts[0]];
+    if (!m) return "";
+    return `${parts[1]}-${String(m).padStart(2, "0")}`;
+  }
 
   const cetakFiltered = useMemo(() => {
     const q = cetakSearch.toLowerCase();
+    const label = cetakBulan ? monthToLabel(cetakBulan) : "";
     return potonganList.filter((p) => {
-      const matchBulan = !cetakBulan || p.bulan === cetakBulan;
+      const matchBulan = !cetakBulan || p.bulan === label;
       const matchStatus = cetakStatus === "semua" || p.status === cetakStatus;
       const matchSearch = !q || p.namaAnggota.toLowerCase().includes(q) || p.anggotaId.toLowerCase().includes(q);
       return matchBulan && matchStatus && matchSearch;
@@ -162,7 +178,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
     const totalAP = data.reduce((s, p) => s + p.angsuranPinjaman, 0);
     const totalJP = data.reduce((s, p) => s + p.jasaPinjaman, 0);
     const totalAll = data.reduce((s, p) => s + p.totalPotongan, 0);
-    const periodeLabel = cetakBulan || "Semua Periode";
+    const periodeLabel = monthToLabel(cetakBulan);
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -235,6 +251,62 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
     exportCSV(headers, rows, `daftar-potongan-${cetakBulan || "semua"}.csv`);
   };
 
+  const handlePrintKoreksi = () => {
+    if (!koreksiItem) return;
+    const periode = koreksiPeriode ? monthToLabel(koreksiPeriode) : koreksiItem.bulan;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Koreksi Potongan - ${koreksiItem.namaAnggota}</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; color: #111; }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  h2 { font-size: 13px; color: #666; margin-bottom: 16px; font-weight: normal; }
+  .org { font-size: 14px; color: #333; margin-bottom: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 16px; }
+  th { background: #f0f0f0; border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-weight: 600; }
+  td { border: 1px solid #ddd; padding: 5px 8px; }
+  .text-right { text-align: right; }
+  .bold { font-weight: 700; }
+  .section { font-size: 13px; font-weight: 700; margin: 12px 0 6px; }
+  .summary { margin-top: 12px; font-size: 12px; }
+  .summary span { font-weight: 600; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+<p class="org">PRIMKOPPOL RESOR SUBANG</p>
+<h1>KOREKSI POTONGAN</h1>
+<h2>${koreksiItem.namaAnggota} (${koreksiItem.anggotaId}) — Periode: ${periode} — Dicetak: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</h2>
+<p class="section">[ SIMPANAN ]</p>
+<table>
+  <thead><tr><th>Kode</th><th>Jenis</th><th class="text-right">Saldo Simpanan</th><th class="text-right">Potongan</th><th class="text-right">% Jasa/Tahun</th></tr></thead>
+  <tbody>${simpananRows.map(r => `<tr><td>${r.kode}</td><td>${r.jenis}</td><td class="text-right">${formatRupiah(r.saldo)}</td><td class="text-right">${formatRupiah(Number(r.potongan) || 0)}</td><td class="text-right">${r.persen}%</td></tr>`).join("")}</tbody>
+</table>
+<div class="summary"><p>Total Simpanan: <span>${formatRupiah(totalSimpanan)}</span> | Total Potongan Simpanan: <span>${formatRupiah(totalPotonganSimpanan)}</span></p></div>
+<p class="section">[ PINJAMAN ]</p>
+<table>
+  <thead><tr><th>Kd</th><th>Keterangan</th><th>No-Rek</th><th>Tgl-Pot</th><th class="text-right">Pot. Pokok</th><th class="text-right">Pot. Jasa</th><th>Deskripsi</th></tr></thead>
+  <tbody>${pinjamanRows.map(r => `<tr><td>${r.kode}</td><td>${r.keterangan}</td><td>${r.noRek}</td><td>${r.tglPot}</td><td class="text-right">${formatRupiah(Number(r.pokok) || 0)}</td><td class="text-right">${formatRupiah(Number(r.jasa) || 0)}</td><td>${r.deskripsi}</td></tr>`).join("")}</tbody>
+</table>
+<div class="summary"><p>Potongan Pokok: <span>${formatRupiah(totalPokokPinjaman)}</span> | Potongan Jasa: <span>${formatRupiah(totalJasaPinjaman)}</span></p>
+<p><strong>GRAND TOTAL POTONGAN: ${formatRupiah(totalPotonganSimpanan + totalPokokPinjaman + totalJasaPinjaman)}</strong></p></div>
+</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 300);
+  };
+
+  const handleShareKoreksi = async () => {
+    if (!koreksiItem) return;
+    const periode = koreksiPeriode ? monthToLabel(koreksiPeriode) : koreksiItem.bulan;
+    const text = `KOREKSI POTONGAN\n${koreksiItem.namaAnggota} (${koreksiItem.anggotaId})\nPeriode: ${periode}\n\n[SIMPANAN]\n${simpananRows.map(r => `${r.kode} - ${r.jenis}: ${formatRupiah(Number(r.potongan) || 0)}`).join("\n")}\nTotal Simpanan: ${formatRupiah(totalSimpanan)}\nTotal Potongan Simpanan: ${formatRupiah(totalPotonganSimpanan)}\n\n[PINJAMAN]\n${pinjamanRows.map(r => `${r.kode} - ${r.keterangan}: Pokok ${formatRupiah(Number(r.pokok) || 0)}, Jasa ${formatRupiah(Number(r.jasa) || 0)}`).join("\n")}\nPotongan Pokok: ${formatRupiah(totalPokokPinjaman)}\nPotongan Jasa: ${formatRupiah(totalJasaPinjaman)}\n\nGRAND TOTAL: ${formatRupiah(totalPotonganSimpanan + totalPokokPinjaman + totalJasaPinjaman)}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: `Koreksi Potongan - ${koreksiItem.namaAnggota}`, text }); } catch {}
+    } else {
+      await navigator.clipboard.writeText(text);
+      alert("Data koreksi sudah disalin ke clipboard!");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -291,13 +363,15 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Periode Bulan</label>
-              <select value={cetakBulan} onChange={(e) => setCetakBulan(e.target.value)} className="w-full bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none cursor-pointer">
-                <option value="">Semua Periode</option>
-                {availableBulans.map((b) => {
-                  const count = potonganList.filter((p) => p.bulan === b).length;
-                  return <option key={b} value={b}>{b} ({count} data)</option>;
-                })}
-              </select>
+              <div className="flex gap-2">
+                <input type="month" value={cetakBulan} onChange={(e) => setCetakBulan(e.target.value)} className="flex-1 bg-navy-800 border border-navy-700/50 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
+                {cetakBulan && (
+                  <button type="button" onClick={() => setCetakBulan("")} className="px-3 py-2.5 bg-navy-700 hover:bg-navy-600 text-navy-300 rounded-xl text-xs font-medium transition-colors cursor-pointer" title="Tampilkan semua periode">
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {!cetakBulan && <p className="text-xs text-accent-400 mt-1">Menampilkan semua periode</p>}
             </div>
             <div>
               <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Status</label>
@@ -326,7 +400,7 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
         <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 overflow-hidden">
           <div className="p-5 border-b border-navy-700/30">
             <h3 className="text-base font-semibold text-white">
-              Preview Data — {cetakBulan || "Semua Periode"}
+              Preview Data — {monthToLabel(cetakBulan)}
             </h3>
             <p className="text-sm text-navy-400 mt-1">
               <span className="text-white font-medium">{cetakFiltered.length}</span> data potongan ditemukan
@@ -522,10 +596,32 @@ export default function PotonganPage({ activeTab = "potongan" }: PotonganPagePro
         </div>
 
         {koreksiItem && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setKoreksiItem(null); setKoreksiSaved(false); }}>
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setKoreksiItem(null); setKoreksiSaved(false); setKoreksiPeriode(""); setKoreksiEditPeriode(false); }}>
             <div className="bg-navy-900 border border-navy-700/50 rounded-2xl w-full max-w-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-bold text-white mb-1">Koreksi Potongan</h3>
-              <p className="text-xs text-navy-400 mb-4">{koreksiItem.namaAnggota} — {koreksiItem.bulan}</p>
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Koreksi Potongan</h3>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-navy-400">{koreksiItem.namaAnggota} — {koreksiPeriode ? monthToLabel(koreksiPeriode) : koreksiItem.bulan}</p>
+                    <button type="button" onClick={() => setKoreksiEditPeriode(!koreksiEditPeriode)} className="text-navy-400 hover:text-accent-400 transition-colors cursor-pointer" title="Ubah periode">
+                      <Calendar className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {koreksiEditPeriode && (
+                    <div className="mt-2">
+                      <input type="month" value={koreksiPeriode || labelToMonth(koreksiItem.bulan)} onChange={(e) => setKoreksiPeriode(e.target.value)} className="bg-navy-800 border border-navy-600/50 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-accent-500" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button type="button" onClick={handlePrintKoreksi} className="p-2 bg-navy-800 hover:bg-navy-700 text-navy-300 hover:text-white rounded-lg transition-colors cursor-pointer" title="Cetak">
+                    <Printer className="w-4 h-4" />
+                  </button>
+                  <button type="button" onClick={handleShareKoreksi} className="p-2 bg-navy-800 hover:bg-navy-700 text-navy-300 hover:text-white rounded-lg transition-colors cursor-pointer" title="Bagikan">
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
 
               {koreksiSaved ? (
                 <div className="text-center py-6">
