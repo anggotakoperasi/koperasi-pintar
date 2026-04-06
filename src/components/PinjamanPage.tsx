@@ -18,24 +18,11 @@ import {
 import StatCard from "./StatCard";
 import { formatRupiah, getStatusPinjamanBg, getOrgName } from "@/data/mock";
 import type { Pinjaman, Anggota } from "@/data/mock";
-import { fetchPinjaman, fetchAnggota, insertPinjaman, bayarAngsuran } from "@/lib/fetchers";
+import { fetchPinjaman, fetchAnggota, insertPinjaman, bayarAngsuran, fetchAppSettings } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
 import { useToast } from "./Toast";
 
 const JENIS_PINJAMAN_DEFAULT = ["Simpan Pinjam", "Kredit Serba Guna", "Bank Mandiri", "Lainnya"];
-
-function loadJenisPinjaman(): string[] {
-  if (typeof window === "undefined") return JENIS_PINJAMAN_DEFAULT;
-  try {
-    const raw = localStorage.getItem("koperasi_pengaturan");
-    if (!raw) return JENIS_PINJAMAN_DEFAULT;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed.kodePinjaman) && parsed.kodePinjaman.length > 0) {
-      return parsed.kodePinjaman.map((k: { nama: string }) => k.nama);
-    }
-  } catch { /* ignore */ }
-  return JENIS_PINJAMAN_DEFAULT;
-}
 
 function addMonthsIso(startYmd: string, months: number): string {
   const [y, m, d] = startYmd.split("-").map(Number);
@@ -93,7 +80,7 @@ export default function PinjamanPage({ highlightKey }: { highlightKey?: string |
   const [submittingBayar, setSubmittingBayar] = useState(false);
 
   const [baruAnggotaId, setBaruAnggotaId] = useState("");
-  const jenisPinjamanList = useMemo(() => loadJenisPinjaman(), [modalBaruOpen]);
+  const [jenisPinjamanList, setJenisPinjamanList] = useState<string[]>(JENIS_PINJAMAN_DEFAULT);
   const [baruJenis, setBaruJenis] = useState<string>("");
   const [baruJumlah, setBaruJumlah] = useState("");
   const [baruTenor, setBaruTenor] = useState("");
@@ -118,13 +105,22 @@ export default function PinjamanPage({ highlightKey }: { highlightKey?: string |
 
   useEffect(() => {
     if (!modalBaruOpen) return;
-    setBaruJenis(jenisPinjamanList[0] || "");
     setLoadingAnggota(true);
-    fetchAnggota()
-      .then(setAnggotaList)
+    Promise.all([fetchAnggota(), fetchAppSettings()])
+      .then(([anggota, settings]) => {
+        setAnggotaList(anggota);
+        if (settings.kodePinjaman.length > 0) {
+          const names = settings.kodePinjaman.map((k) => k.nama);
+          setJenisPinjamanList(names);
+          setBaruJenis(names[0] || "");
+        } else {
+          setBaruJenis(jenisPinjamanList[0] || "");
+        }
+      })
       .catch(console.error)
       .finally(() => setLoadingAnggota(false));
-  }, [modalBaruOpen, jenisPinjamanList]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalBaruOpen]);
 
   const closeModalBaru = useCallback(() => { if (!submittingBaru) setModalBaruOpen(false); }, [submittingBaru]);
   const closeModalBayar = useCallback(() => { if (!submittingBayar) setModalBayarOpen(false); }, [submittingBayar]);

@@ -893,6 +893,37 @@ const reportGenerators: Record<string, ReportGenerator> = {
       ],
     };
   },
+
+  "Arsip Transaksi Lengkap": (_anggota, _transaksi, _pinjaman, _potongan, _bulan, jurnalEntries, coaList) => {
+    const coaMap = new Map(coaList.map(c => [c.kode, c.nama]));
+    const sorted = [...jurnalEntries].sort((a, b) => a.tanggal.localeCompare(b.tanggal) || a.noBukti.localeCompare(b.noBukti));
+    let totalDebit = 0;
+    let totalKredit = 0;
+    const rows = sorted.map(j => {
+      totalDebit += j.debit;
+      totalKredit += j.kredit;
+      return [
+        fmtDate(j.tanggal),
+        j.noBukti,
+        coaMap.get(j.akunKode) || j.akunKode,
+        j.keterangan,
+        j.debit > 0 ? formatRupiah(j.debit) : "-",
+        j.kredit > 0 ? formatRupiah(j.kredit) : "-",
+      ];
+    });
+    return {
+      title: "Arsip Transaksi Lengkap",
+      subtitle: "Seluruh catatan jurnal dari awal hingga saat ini (termasuk anggota yang sudah tidak aktif/dihapus)",
+      headers: ["Tanggal", "No. Bukti", "Akun", "Keterangan", "Debit", "Kredit"],
+      rows,
+      summary: [
+        { label: "Total Entri", value: String(sorted.length) },
+        { label: "Total Debit", value: formatRupiah(totalDebit) },
+        { label: "Total Kredit", value: formatRupiah(totalKredit) },
+        { label: "Selisih", value: formatRupiah(Math.abs(totalDebit - totalKredit)) },
+      ],
+    };
+  },
 };
 
 function buildSaldoPerAkun(jurnalEntries: JurnalEntry[], coaList: COA[]): Record<string, number> {
@@ -963,7 +994,7 @@ const laporanCategories = [
     title: "Laporan Keuangan",
     icon: BarChart3,
     color: "cyan",
-    items: ["Jurnal Umum", "Buku Besar", "Neraca Saldo", "Neraca", "Laba Rugi", "Arus Kas", "Grafik Tren 3 Tahun"],
+    items: ["Jurnal Umum", "Buku Besar", "Neraca Saldo", "Neraca", "Laba Rugi", "Arus Kas", "Grafik Tren 3 Tahun", "Arsip Transaksi Lengkap"],
   },
 ];
 
@@ -996,6 +1027,7 @@ export default function LaporanPage() {
   const [allPinjaman, setAllPinjaman] = useState<Pinjaman[]>([]);
   const [allPotongan, setAllPotongan] = useState<Potongan[]>([]);
   const [allJurnal, setAllJurnal] = useState<JurnalEntry[]>([]);
+  const [allJurnalFull, setAllJurnalFull] = useState<JurnalEntry[]>([]);
   const [allCOA, setAllCOA] = useState<COA[]>([]);
   const [selectedBulan, setSelectedBulan] = useState(() => {
     const now = new Date();
@@ -1017,7 +1049,15 @@ export default function LaporanPage() {
       setAllPinjaman(p);
       setAllPotongan(pot);
       setAllCOA(coa);
-      setAllJurnal(jurnal);
+      setAllJurnalFull(jurnal);
+
+      const validRefIds = new Set<string>();
+      t.forEach(r => validRefIds.add(r.id));
+      p.forEach(r => validRefIds.add(r.id));
+      pot.forEach(r => validRefIds.add(r.id));
+      const filteredJurnal = jurnal.filter(j => !j.refId || validRefIds.has(j.refId));
+      setAllJurnal(filteredJurnal);
+
       setDataLoaded(true);
     } catch (err) {
       console.error("Failed to load data:", err);
@@ -1031,7 +1071,8 @@ export default function LaporanPage() {
   const openReport = (reportName: string) => {
     const generator = reportGenerators[reportName];
     if (!generator) return;
-    const result = generator(allAnggota, allTransaksi, allPinjaman, allPotongan, selectedBulan, allJurnal, allCOA);
+    const jurnalToUse = reportName === "Arsip Transaksi Lengkap" ? allJurnalFull : allJurnal;
+    const result = generator(allAnggota, allTransaksi, allPinjaman, allPotongan, selectedBulan, jurnalToUse, allCOA);
     setReport(result);
     setReportSearch("");
     setReportFilter("semua");
