@@ -82,18 +82,47 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
       if (!blob) return;
       const file = new File([blob], `${filename}.jpg`, { type: "image/jpeg" });
 
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title, files: [file] });
-      } else {
+      let shared = false;
+      if (typeof navigator.share === "function") {
+        try {
+          const canShareFiles = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
+          if (canShareFiles) {
+            await navigator.share({ title, files: [file] });
+            shared = true;
+          } else {
+            await navigator.share({ title, text: `${title} - PRIMKOPPOL Resor Subang` });
+            shared = true;
+          }
+        } catch (e) {
+          if ((e as Error).name === "AbortError") { shared = true; }
+        }
+      }
+
+      if (!shared) {
         const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${filename}.jpg`;
-        a.click();
-        URL.revokeObjectURL(url);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${filename}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
     } catch (err) {
-      if ((err as Error).name !== "AbortError") console.error(err);
+      console.error("Share error:", err);
+      try {
+        const blob = await captureImage();
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${filename}.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+      } catch { /* final fallback failed */ }
     } finally {
       setSharing(false);
     }
