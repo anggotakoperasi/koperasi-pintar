@@ -611,24 +611,34 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
             {activeModal === "kode_simpanan" && (
               <>
                 {kodeSimpanan.map((ks, i) => (
-                  <div key={i} className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="block text-xs text-navy-400 mb-1">Kode</label>
-                      <input value={ks.kode} onChange={(e) => { const copy = [...kodeSimpanan]; copy[i] = { ...ks, kode: e.target.value }; setKodeSimpanan(copy); }} className={inputCls} />
+                  <div key={i} className="flex items-end gap-2">
+                    <div className="flex-1 grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs text-navy-400 mb-1">Kode</label>
+                        <input value={ks.kode} onChange={(e) => { const copy = [...kodeSimpanan]; copy[i] = { ...ks, kode: e.target.value }; setKodeSimpanan(copy); }} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-navy-400 mb-1">Nama</label>
+                        <input value={ks.nama} onChange={(e) => { const copy = [...kodeSimpanan]; copy[i] = { ...ks, nama: e.target.value }; setKodeSimpanan(copy); }} className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-navy-400 mb-1">Keterangan</label>
+                        <input value={ks.keterangan} onChange={(e) => { const copy = [...kodeSimpanan]; copy[i] = { ...ks, keterangan: e.target.value }; setKodeSimpanan(copy); }} className={inputCls} />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs text-navy-400 mb-1">Nama</label>
-                      <input value={ks.nama} onChange={(e) => { const copy = [...kodeSimpanan]; copy[i] = { ...ks, nama: e.target.value }; setKodeSimpanan(copy); }} className={inputCls} />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-navy-400 mb-1">Keterangan</label>
-                      <input value={ks.keterangan} onChange={(e) => { const copy = [...kodeSimpanan]; copy[i] = { ...ks, keterangan: e.target.value }; setKodeSimpanan(copy); }} className={inputCls} />
-                    </div>
+                    <button type="button" onClick={() => { if (kodeSimpanan.length > 1) setKodeSimpanan(kodeSimpanan.filter((_, j) => j !== i)); }} disabled={kodeSimpanan.length <= 1} className="mb-0.5 p-2 rounded-lg bg-danger-600/20 text-danger-400 hover:bg-danger-600/30 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" title="Hapus baris">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
-                <button type="button" disabled={saving} onClick={async () => { try { await saveSettingsToDB(); showSuccess("Kode simpanan berhasil disimpan!"); } catch { showSuccess("Gagal simpan."); } }} className={btnPrimary}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
-                </button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setKodeSimpanan([...kodeSimpanan, { kode: "", nama: "", keterangan: "" }])} className="flex items-center gap-2 bg-navy-700 hover:bg-navy-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
+                    <Plus className="w-4 h-4" /> Tambah Baris
+                  </button>
+                  <button type="button" disabled={saving} onClick={async () => { try { await saveSettingsToDB(); showSuccess("Kode simpanan berhasil disimpan!"); } catch { showSuccess("Gagal simpan."); } }} className={btnPrimary}>
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
+                  </button>
+                </div>
               </>
             )}
             {activeModal === "backup" && (
