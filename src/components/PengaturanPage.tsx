@@ -429,13 +429,22 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                             setSuperAdminWarning(true);
                             return;
                           }
-                          setOperators((prev) => {
-                            const exists = prev.some((o) => o.id === editingOp.id);
-                            return exists ? prev.map((o) => o.id === editingOp.id ? editingOp : o) : [...prev, editingOp];
-                          });
+                          const exists = operators.some((o) => o.id === editingOp.id);
+                          const updatedOps = exists
+                            ? operators.map((o) => o.id === editingOp.id ? editingOp : o)
+                            : [...operators, editingOp];
+                          setOperators(updatedOps);
+
+                          try {
+                            const raw = localStorage.getItem(SETTINGS_KEY);
+                            const current = raw ? JSON.parse(raw) : {};
+                            current.operators = updatedOps;
+                            localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...DEFAULTS, ...current }));
+                          } catch { /* ignore */ }
+
                           setSuperAdminWarning(false);
                           setEditingOp(null);
-                          saveWithPersist(operators.some(o => o.id === editingOp.id) ? "Data operator berhasil diperbarui!" : "Operator baru berhasil ditambahkan!");
+                          saveWithPersist(exists ? "Data operator berhasil diperbarui!" : "Operator baru berhasil ditambahkan!");
                         }}
                         className={btnPrimary + " flex-1 cursor-pointer"}
                       >
@@ -489,7 +498,14 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                                     type="button"
                                     onClick={() => {
                                       if (confirm(`Hapus operator ${op.nama}?`)) {
-                                        setOperators((prev) => prev.filter((o) => o.id !== op.id));
+                                        const updatedOps = operators.filter((o) => o.id !== op.id);
+                                        setOperators(updatedOps);
+                                        try {
+                                          const raw = localStorage.getItem(SETTINGS_KEY);
+                                          const current = raw ? JSON.parse(raw) : {};
+                                          current.operators = updatedOps;
+                                          localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...DEFAULTS, ...current }));
+                                        } catch { /* ignore */ }
                                         saveWithPersist("Operator berhasil dihapus.");
                                       }
                                     }}
