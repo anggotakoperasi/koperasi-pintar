@@ -259,39 +259,36 @@ export default function SimpananPage({ highlightKey }: { highlightKey?: string |
                   <p className="mt-2 text-sm text-success-400">
                     Dipilih: {selectedAnggota.nama} ({selectedAnggota.nomorAnggota})
                   </p>
-                ) : null}
-                <ul className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-navy-700 bg-navy-800/80 divide-y divide-navy-700/50">
-                  {filteredModalAnggota.length === 0 ? (
-                    <li className="px-3 py-3 text-sm text-navy-400 text-center">
-                      Tidak ada anggota yang cocok.
-                    </li>
-                  ) : (
-                    filteredModalAnggota.map((a) => (
-                      <li key={a.id}>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setForm((f) => ({
-                              ...f,
-                              anggotaId: a.id,
-                              anggotaQuery: `${a.nama} — ${a.nomorAnggota}`,
-                            }))
-                          }
-                          className={`w-full text-left px-3 py-2.5 text-sm transition-colors cursor-pointer ${
-                            form.anggotaId === a.id
-                              ? "bg-accent-600/20 text-accent-300"
-                              : "text-navy-200 hover:bg-navy-700/50 text-white"
-                          }`}
-                        >
-                          <span className="font-medium">{a.nama}</span>
-                          <span className="text-navy-400 text-xs block">
-                            {a.nomorAnggota} · {a.nrp}
-                          </span>
-                        </button>
+                ) : (
+                  <ul className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-navy-700 bg-navy-800/80 divide-y divide-navy-700/50">
+                    {filteredModalAnggota.length === 0 ? (
+                      <li className="px-3 py-3 text-sm text-navy-400 text-center">
+                        Tidak ada anggota yang cocok.
                       </li>
-                    ))
-                  )}
-                </ul>
+                    ) : (
+                      filteredModalAnggota.map((a) => (
+                        <li key={a.id}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setForm((f) => ({
+                                ...f,
+                                anggotaId: a.id,
+                                anggotaQuery: `${a.nama} — ${a.nomorAnggota}`,
+                              }))
+                            }
+                            className="w-full text-left px-3 py-2.5 text-sm transition-colors cursor-pointer text-navy-200 hover:bg-navy-700/50 text-white"
+                          >
+                            <span className="font-medium">{a.nama}</span>
+                            <span className="text-navy-400 text-xs block">
+                              {a.nomorAnggota} · {a.nrp}
+                            </span>
+                          </button>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                )}
               </div>
 
               <div>
