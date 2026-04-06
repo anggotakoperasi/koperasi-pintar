@@ -14,6 +14,7 @@ interface DetailPopupProps {
 
 export default function DetailPopup({ open, onClose, title, filename = "detail", children }: DetailPopupProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
 
   const stableOnClose = useCallback(() => onClose(), [onClose]);
@@ -59,19 +60,24 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
     setTimeout(() => { printWin.print(); }, 300);
   };
 
+  const triggerDownload = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${filename}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   const handleDownload = async () => {
-    setSharing(true);
+    setDownloading(true);
     try {
       const blob = await captureImage();
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${filename}.jpg`;
-      a.click();
-      URL.revokeObjectURL(url);
+      if (blob) triggerDownload(blob);
     } finally {
-      setSharing(false);
+      setDownloading(false);
     }
   };
 
@@ -94,34 +100,16 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
             shared = true;
           }
         } catch (e) {
-          if ((e as Error).name === "AbortError") { shared = true; }
+          if ((e as Error).name === "AbortError") shared = true;
         }
       }
 
-      if (!shared) {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${filename}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }
+      if (!shared) triggerDownload(blob);
     } catch (err) {
       console.error("Share error:", err);
       try {
         const blob = await captureImage();
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `${filename}.jpg`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-        }
+        if (blob) triggerDownload(blob);
       } catch { /* final fallback failed */ }
     } finally {
       setSharing(false);
@@ -153,10 +141,10 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
           <button type="button" onClick={handlePrint} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-accent-600 hover:bg-accent-500 py-2.5 text-sm font-medium text-white transition-colors">
             <Printer className="w-4 h-4" /> Cetak
           </button>
-          <button type="button" onClick={handleDownload} disabled={sharing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-navy-700 hover:bg-navy-600 disabled:opacity-50 py-2.5 text-sm font-medium text-white transition-colors">
-            {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download
+          <button type="button" onClick={handleDownload} disabled={downloading || sharing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-navy-700 hover:bg-navy-600 disabled:opacity-50 py-2.5 text-sm font-medium text-white transition-colors">
+            {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download
           </button>
-          <button type="button" onClick={handleShare} disabled={sharing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-success-600 hover:bg-success-500 disabled:opacity-50 py-2.5 text-sm font-medium text-white transition-colors">
+          <button type="button" onClick={handleShare} disabled={downloading || sharing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-success-600 hover:bg-success-500 disabled:opacity-50 py-2.5 text-sm font-medium text-white transition-colors">
             {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />} Share
           </button>
         </div>
