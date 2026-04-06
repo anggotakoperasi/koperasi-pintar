@@ -431,7 +431,12 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                         onChange={(e) => setEditingOp({ ...editingOp, role: e.target.value })}
                         className={`${inputCls} cursor-pointer`}
                       >
-                        {ROLE_OPTIONS.map((r) => (
+                        {ROLE_OPTIONS.filter((r) => {
+                          if (r !== "Super Admin") return true;
+                          const isEditing = operators.some(o => o.id === editingOp.id);
+                          if (isEditing && editingOp.role === "Super Admin") return true;
+                          return !operators.some(o => o.role === "Super Admin");
+                        }).map((r) => (
                           <option key={r} value={r}>{r}</option>
                         ))}
                       </select>
