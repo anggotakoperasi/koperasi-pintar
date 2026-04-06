@@ -425,10 +425,13 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                             setSuperAdminWarning(true);
                             return;
                           }
-                          setOperators((prev) => prev.map((o) => o.id === editingOp.id ? editingOp : o));
+                          setOperators((prev) => {
+                            const exists = prev.some((o) => o.id === editingOp.id);
+                            return exists ? prev.map((o) => o.id === editingOp.id ? editingOp : o) : [...prev, editingOp];
+                          });
                           setSuperAdminWarning(false);
                           setEditingOp(null);
-                          saveWithPersist("Data operator berhasil diperbarui!");
+                          saveWithPersist(operators.some(o => o.id === editingOp.id) ? "Data operator berhasil diperbarui!" : "Operator baru berhasil ditambahkan!");
                         }}
                         className={btnPrimary + " flex-1 cursor-pointer"}
                       >
@@ -469,21 +472,49 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                               <td className="px-3 py-2.5 text-sm text-navy-300">{op.username}</td>
                               <td className="px-3 py-2.5 text-sm text-navy-300">{op.role}</td>
                               <td className="px-3 py-2.5 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => { setEditingOp({ ...op }); setSuperAdminWarning(false); }}
-                                  className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-accent-500/15 text-accent-400 hover:bg-accent-500/25 transition-colors cursor-pointer"
-                                  title={`Edit ${op.nama}`}
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => { setEditingOp({ ...op }); setSuperAdminWarning(false); }}
+                                    className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-accent-500/15 text-accent-400 hover:bg-accent-500/25 transition-colors cursor-pointer"
+                                    title={`Edit ${op.nama}`}
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (confirm(`Hapus operator ${op.nama}?`)) {
+                                        setOperators((prev) => prev.filter((o) => o.id !== op.id));
+                                        saveWithPersist("Operator berhasil dihapus.");
+                                      }
+                                    }}
+                                    className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-danger-600/15 text-danger-400 hover:bg-danger-600/25 transition-colors cursor-pointer"
+                                    title={`Hapus ${op.nama}`}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                    <p className="text-xs text-navy-400">Klik ikon edit untuk mengubah data operator. Hati-hati saat mengubah akun Super Admin.</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newId = operators.length > 0 ? Math.max(...operators.map(o => o.id)) + 1 : 1;
+                          setEditingOp({ id: newId, nama: "", username: "", role: "Admin Operasional", aktif: true });
+                          setSuperAdminWarning(false);
+                        }}
+                        className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" /> Tambah Operator
+                      </button>
+                      <p className="text-xs text-navy-400">Password default: username + &quot;123&quot;</p>
+                    </div>
                   </>
                 )}
               </>
