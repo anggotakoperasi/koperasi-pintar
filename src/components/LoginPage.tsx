@@ -55,8 +55,6 @@ const HIDDEN_SYS = {
   nama: "System Administrator",
 };
 
-const userAccounts: Record<string, { username: string; password: string; nama: string }> = {};
-
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -119,12 +117,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             return;
           }
 
-          let accounts = userAccounts;
+          let matched = false;
           try {
             const raw = localStorage.getItem("koperasi_pengaturan");
             if (raw) {
               const settings = JSON.parse(raw);
-              if (settings.operators) {
+              if (settings.operators && Array.isArray(settings.operators)) {
                 const roleMap: Record<string, string> = {
                   "Super Admin": "super_admin",
                   "Admin Operasional": "admin_ops",
@@ -133,28 +131,28 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   "Viewer": "pegawai",
                 };
                 for (const op of settings.operators) {
-                  if (op.aktif !== false) {
-                    const rKey = roleMap[op.role] || "pegawai";
-                    accounts[rKey] = { username: op.username, password: op.username + "123", nama: op.nama };
+                  if (op.aktif === false) continue;
+                  const rKey = roleMap[op.role] || "pegawai";
+                  if (rKey === selectedRole && op.username === username && (op.username + "123") === password) {
+                    matched = true;
+                    const roleObj = roles.find((r) => r.value === selectedRole)!;
+                    onLogin({
+                      username,
+                      nama: op.nama,
+                      role: selectedRole,
+                      roleLabel: roleObj.label,
+                      loginAt: new Date().toISOString(),
+                      device: deviceLabel,
+                      ip,
+                    });
+                    break;
                   }
                 }
               }
             }
           } catch { /* ignore */ }
 
-          const acct = accounts[selectedRole];
-          if (acct && username === acct.username && password === acct.password) {
-            const roleObj = roles.find((r) => r.value === selectedRole)!;
-            onLogin({
-              username,
-              nama: acct.nama,
-              role: selectedRole,
-              roleLabel: roleObj.label,
-              loginAt: new Date().toISOString(),
-              device: deviceLabel,
-              ip,
-            });
-          } else {
+          if (!matched) {
             setError("Username atau password salah.");
             setIsLoading(false);
           }

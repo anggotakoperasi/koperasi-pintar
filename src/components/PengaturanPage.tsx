@@ -126,6 +126,10 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
   }, [namaKoperasi, alamat, ketua, badanHukum, periode, operators, kodePinjaman, kodeSimpanan]);
 
+  useEffect(() => {
+    persistSettings();
+  }, [persistSettings]);
+
   const saveWithPersist = (msg: string) => {
     setSaving(true);
     setTimeout(() => {
@@ -421,7 +425,7 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                         type="button"
                         disabled={!editingOp.nama.trim() || !editingOp.username.trim()}
                         onClick={() => {
-                          if (editingOp.id === 1 && !superAdminWarning) {
+                          if (editingOp.role === "Super Admin" && !superAdminWarning) {
                             setSuperAdminWarning(true);
                             return;
                           }
