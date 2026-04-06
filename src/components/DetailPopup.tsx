@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { X, Printer, Share2, Download, Loader2 } from "lucide-react";
+import { X, Printer, Share2, Download, Loader2, Check } from "lucide-react";
 import html2canvas from "html2canvas-pro";
 
 interface DetailPopupProps {
@@ -12,22 +12,20 @@ interface DetailPopupProps {
   children: React.ReactNode;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 export default function DetailPopup({ open, onClose, title, filename = "detail", children }: DetailPopupProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const cachedBlob = useRef<Blob | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [cacheReady, setCacheReady] = useState(false);
+  const [imageReady, setImageReady] = useState(false);
 
   const stableOnClose = useCallback(() => onClose(), [onClose]);
 
   useEffect(() => {
     if (!open) return;
-    function onKey(e: KeyboardEvent) {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") { e.preventDefault(); stableOnClose(); }
-    }
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, stableOnClose]);
@@ -35,12 +33,11 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
   useEffect(() => {
     if (!open) {
       cachedBlob.current = null;
-      setCacheReady(false);
+      setImageReady(false);
       return;
     }
     let cancelled = false;
-    const preCapture = async () => {
-      await sleep(500);
+    const timer = setTimeout(async () => {
       if (cancelled || !contentRef.current) return;
       try {
         const canvas = await html2canvas(contentRef.current, {
@@ -53,17 +50,16 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
         );
         if (!cancelled && blob) {
           cachedBlob.current = blob;
-          setCacheReady(true);
+          setImageReady(true);
         }
-      } catch { /* pre-capture failed, will capture on demand */ }
-    };
-    preCapture();
-    return () => { cancelled = true; };
+      } catch { /* pre-capture failed */ }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [open]);
 
   if (!open) return null;
 
-  const captureImage = async (): Promise<Blob | null> => {
+  const getBlob = async (): Promise<Blob | null> => {
     if (cachedBlob.current) return cachedBlob.current;
     if (!contentRef.current) return null;
     const canvas = await html2canvas(contentRef.current, {
@@ -74,15 +70,29 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92)
     );
-    if (blob) cachedBlob.current = blob;
+    if (blob) {
+      cachedBlob.current = blob;
+      setImageReady(true);
+    }
     return blob;
+  };
+
+  const triggerDownload = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${filename}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const handlePrint = () => {
     if (!contentRef.current) return;
-    const printWin = window.open("", "_blank", "width=800,height=600");
-    if (!printWin) return;
-    printWin.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>
+    const w = window.open("", "_blank", "width=800,height=600");
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>
       body{font-family:system-ui,-apple-system,sans-serif;padding:24px;color:#111;background:#fff}
       table{width:100%;border-collapse:collapse;margin-top:12px}
       th,td{border:1px solid #ddd;padding:8px 12px;text-align:left;font-size:13px}
@@ -91,28 +101,18 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
       .header{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #333}
       .row{display:flex;gap:8px;margin-bottom:6px} .label{color:#666;min-width:140px;font-size:13px} .value{font-weight:500;font-size:13px}
     </style></head><body>`);
-    printWin.document.write(`<div class="header"><h2>PRIMKOPPOL RESOR SUBANG</h2><h3>Jl. Otista No.52, Subang</h3></div>`);
-    printWin.document.write(contentRef.current.innerHTML);
-    printWin.document.write("</body></html>");
-    printWin.document.close();
-    setTimeout(() => { printWin.print(); }, 300);
-  };
-
-  const triggerDownload = (blob: Blob) => {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${filename}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    w.document.write(`<div class="header"><h2>PRIMKOPPOL RESOR SUBANG</h2><h3>Jl. Otista No.52, Subang</h3></div>`);
+    w.document.write(contentRef.current.innerHTML);
+    w.document.write("</body></html>");
+    w.document.close();
+    setTimeout(() => w.print(), 300);
   };
 
   const handleDownload = async () => {
+    if (downloading) return;
     setDownloading(true);
     try {
-      const blob = await captureImage();
+      const blob = await getBlob();
       if (blob) triggerDownload(blob);
     } finally {
       setDownloading(false);
@@ -120,38 +120,39 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
   };
 
   const handleShare = async () => {
+    if (sharing) return;
     setSharing(true);
     try {
-      const blob = await captureImage();
-      if (!blob) return;
+      const blob = await getBlob();
+      if (!blob) { setSharing(false); return; }
 
-      await sleep(100);
+      // Give browser time to breathe after any canvas work
+      await new Promise((r) => setTimeout(r, 150));
 
-      const file = new File([blob], `${filename}.jpg`, { type: "image/jpeg" });
-
-      let shared = false;
       if (typeof navigator.share === "function") {
+        const file = new File([blob], `${filename}.jpg`, { type: "image/jpeg" });
         try {
-          const canShareFiles = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
-          if (canShareFiles) {
+          const canFiles = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
+          if (canFiles) {
             await navigator.share({ title, files: [file] });
-            shared = true;
           } else {
             await navigator.share({ title, text: `${title} - PRIMKOPPOL Resor Subang` });
-            shared = true;
           }
+          setSharing(false);
+          return;
         } catch (e) {
-          if ((e as Error).name === "AbortError") shared = true;
+          if ((e as Error).name === "AbortError") {
+            setSharing(false);
+            return;
+          }
         }
       }
 
-      if (!shared) triggerDownload(blob);
-    } catch (err) {
-      console.error("Share error:", err);
+      triggerDownload(blob);
+    } catch {
       try {
-        const blob = cachedBlob.current || await captureImage();
-        if (blob) triggerDownload(blob);
-      } catch { /* final fallback failed */ }
+        if (cachedBlob.current) triggerDownload(cachedBlob.current);
+      } catch { /* nothing left to try */ }
     } finally {
       setSharing(false);
     }
@@ -182,11 +183,27 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
           <button type="button" onClick={handlePrint} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-accent-600 hover:bg-accent-500 py-2.5 text-sm font-medium text-white transition-colors">
             <Printer className="w-4 h-4" /> Cetak
           </button>
-          <button type="button" onClick={handleDownload} disabled={downloading || sharing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-navy-700 hover:bg-navy-600 disabled:opacity-50 py-2.5 text-sm font-medium text-white transition-colors">
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-navy-700 hover:bg-navy-600 disabled:opacity-60 py-2.5 text-sm font-medium text-white transition-colors"
+          >
             {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download
           </button>
-          <button type="button" onClick={handleShare} disabled={downloading || sharing} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-success-600 hover:bg-success-500 disabled:opacity-50 py-2.5 text-sm font-medium text-white transition-colors">
-            {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />} Share
+          <button
+            type="button"
+            onClick={handleShare}
+            disabled={sharing}
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-success-600 hover:bg-success-500 disabled:opacity-60 py-2.5 text-sm font-medium text-white transition-colors"
+          >
+            {sharing
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : imageReady
+                ? <><Share2 className="w-4 h-4" /><Check className="w-3 h-3 -ml-1 text-success-300" /></>
+                : <Share2 className="w-4 h-4" />
+            }
+            {" "}Share
           </button>
         </div>
       </div>
