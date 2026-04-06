@@ -43,7 +43,7 @@ type ModalId = "setup" | "operator" | "kode_pinjaman" | "kode_simpanan" | "backu
 
 interface KodePinjaman { kode: string; nama: string; bunga: string; }
 interface KodeSimpanan { kode: string; nama: string; keterangan: string; }
-interface Operator { id: number; nama: string; username: string; role: string; aktif: boolean; }
+interface Operator { id: number; nama: string; username: string; password?: string; role: string; aktif: boolean; }
 
 const ROLE_OPTIONS = ["Super Admin", "Admin Operasional", "Bendahara", "Manajer Unit", "Viewer"];
 
@@ -133,7 +133,6 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
   const saveWithPersist = (msg: string) => {
     setSaving(true);
     setTimeout(() => {
-      persistSettings();
       setSaving(false);
       setSuccessMsg(msg);
       setTimeout(() => setSuccessMsg(null), 2500);
@@ -402,6 +401,17 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                       <input value={editingOp.username} onChange={(e) => setEditingOp({ ...editingOp, username: e.target.value })} className={inputCls} />
                     </div>
                     <div>
+                      <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Password</label>
+                      <input
+                        type="password"
+                        value={editingOp.password ?? ""}
+                        onChange={(e) => setEditingOp({ ...editingOp, password: e.target.value })}
+                        placeholder="Masukkan password"
+                        className={inputCls}
+                      />
+                      <p className="text-[10px] text-navy-500 mt-1">Minimal 6 karakter. Wajib diisi.</p>
+                    </div>
+                    <div>
                       <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Role</label>
                       <select
                         value={editingOp.role}
@@ -423,7 +433,7 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                       </button>
                       <button
                         type="button"
-                        disabled={!editingOp.nama.trim() || !editingOp.username.trim()}
+                        disabled={!editingOp.nama.trim() || !editingOp.username.trim() || !(editingOp.password && editingOp.password.length >= 6)}
                         onClick={() => {
                           if (editingOp.role === "Super Admin" && !superAdminWarning) {
                             setSuperAdminWarning(true);
@@ -526,14 +536,14 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                         type="button"
                         onClick={() => {
                           const newId = operators.length > 0 ? Math.max(...operators.map(o => o.id)) + 1 : 1;
-                          setEditingOp({ id: newId, nama: "", username: "", role: "Admin Operasional", aktif: true });
+                          setEditingOp({ id: newId, nama: "", username: "", password: "", role: "Admin Operasional", aktif: true });
                           setSuperAdminWarning(false);
                         }}
                         className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer"
                       >
                         <Plus className="w-4 h-4" /> Tambah Operator
                       </button>
-                      <p className="text-xs text-navy-400">Password default: username + &quot;123&quot;</p>
+                      <p className="text-xs text-navy-400">Password ditentukan saat membuat operator.</p>
                     </div>
                   </>
                 )}

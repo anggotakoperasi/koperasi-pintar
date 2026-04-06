@@ -120,11 +120,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           let matched = false;
           try {
             const raw = localStorage.getItem("koperasi_pengaturan");
-            console.log("[LOGIN DEBUG] raw koperasi_pengaturan:", raw);
             if (raw) {
               const settings = JSON.parse(raw);
-              console.log("[LOGIN DEBUG] operators:", JSON.stringify(settings.operators));
-              console.log("[LOGIN DEBUG] selectedRole:", selectedRole, "username:", username, "password:", password);
               if (settings.operators && Array.isArray(settings.operators)) {
                 const roleMap: Record<string, string> = {
                   "Super Admin": "super_admin",
@@ -136,8 +133,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 for (const op of settings.operators) {
                   if (op.aktif === false) continue;
                   const rKey = roleMap[op.role] || "pegawai";
-                  console.log("[LOGIN DEBUG] checking op:", op.username, "rKey:", rKey, "expected pass:", op.username + "123");
-                  if (rKey === selectedRole && op.username === username && (op.username + "123") === password) {
+                  const opPass = op.password || (op.username + "123");
+                  if (rKey === selectedRole && op.username === username && opPass === password) {
                     matched = true;
                     const roleObj = roles.find((r) => r.value === selectedRole)!;
                     onLogin({
@@ -154,7 +151,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 }
               }
             }
-          } catch (err) { console.error("[LOGIN DEBUG] error:", err); }
+          } catch { /* ignore */ }
 
           if (!matched) {
             setError("Username atau password salah.");
