@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Building2,
   UserCog,
@@ -20,7 +20,11 @@ import {
   Shield,
   Plus,
   Trash2,
+  Download,
+  FileCheck,
 } from "lucide-react";
+import { fetchAnggota, fetchTransaksiSimpanan, fetchPinjaman, fetchPotongan, fetchCOA, fetchJurnalEntriesWithAkun } from "@/lib/fetchers";
+import { supabase } from "@/lib/supabase";
 
 const SETTINGS_KEY = "koperasi_pengaturan";
 
@@ -101,6 +105,22 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
   const [kodePinjaman, setKodePinjaman] = useState<KodePinjaman[]>(stored.kodePinjaman);
   const [kodeSimpanan, setKodeSimpanan] = useState<KodeSimpanan[]>(stored.kodeSimpanan);
 
+  const [lastBackup, setLastBackup] = useState<string | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restorePreview, setRestorePreview] = useState<Record<string, number> | null>(null);
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restoreData, setRestoreData] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLastBackup(localStorage.getItem("koperasi_last_backup"));
+    }
+  }, []);
+
   const persistSettings = useCallback(() => {
     const data = { namaKoperasi, alamat, ketua, badanHukum, periode, operators, kodePinjaman, kodeSimpanan };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
@@ -116,7 +136,140 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
     }, 600);
   };
 
-  const closeModal = useCallback(() => { setActiveModal(null); setSuccessMsg(null); }, []);
+  const closeModal = useCallback(() => {
+    setActiveModal(null);
+    setSuccessMsg(null);
+    setBackupError(null);
+    setRestoreError(null);
+    setRestorePreview(null);
+    setRestoreFile(null);
+    setRestoreData(null);
+  }, []);
+
+  const handleBackup = async () => {
+    setBackupBusy(true);
+    setBackupError(null);
+    try {
+      const [anggota, simpanan, pinjaman, potongan, coa, jurnal] = await Promise.all([
+        fetchAnggota(),
+        fetchTransaksiSimpanan(),
+        fetchPinjaman(),
+        fetchPotongan(),
+        fetchCOA().catch(() => []),
+        fetchJurnalEntriesWithAkun().catch(() => []),
+      ]);
+      const backupPayload = {
+        version: "1.0",
+        app: "koperasi-pintar",
+        createdAt: new Date().toISOString(),
+        data: { anggota, simpanan, pinjaman, potongan, coa, jurnal },
+      };
+      const json = JSON.stringify(backupPayload, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `backup-koperasi-${dateStr}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      const now = new Date().toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      localStorage.setItem("koperasi_last_backup", now);
+      setLastBackup(now);
+      setSuccessMsg(`Backup berhasil! File "backup-koperasi-${dateStr}.json" telah didownload.`);
+    } catch (err) {
+      setBackupError(`Gagal backup: ${(err as Error).message}`);
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const handleRestoreFileSelect = async (file: File) => {
+    setRestoreError(null);
+    setRestorePreview(null);
+    setRestoreFile(file);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!parsed.data || parsed.app !== "koperasi-pintar") {
+        setRestoreError("File bukan backup Koperasi Pintar yang valid.");
+        return;
+      }
+      const d = parsed.data;
+      const preview: Record<string, number> = {};
+      if (d.anggota?.length) preview["Anggota"] = d.anggota.length;
+      if (d.simpanan?.length) preview["Transaksi Simpanan"] = d.simpanan.length;
+      if (d.pinjaman?.length) preview["Pinjaman"] = d.pinjaman.length;
+      if (d.potongan?.length) preview["Potongan"] = d.potongan.length;
+      if (d.coa?.length) preview["Chart of Accounts"] = d.coa.length;
+      if (d.jurnal?.length) preview["Jurnal Entries"] = d.jurnal.length;
+      setRestorePreview(preview);
+      setRestoreData(parsed);
+    } catch {
+      setRestoreError("File tidak bisa dibaca. Pastikan format JSON valid.");
+    }
+  };
+
+  const toSnake = (s: string) => s.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+
+  const handleRestoreConfirm = async () => {
+    if (!restoreData?.data) return;
+    setRestoreBusy(true);
+    setRestoreError(null);
+    try {
+      const d = restoreData.data;
+      const mapToDb = (arr: any[]) => arr.map((item: any) => {
+        const row: any = {};
+        for (const [k, v] of Object.entries(item)) {
+          row[toSnake(k)] = v;
+        }
+        return row;
+      });
+
+      if (d.anggota?.length) {
+        const rows = mapToDb(d.anggota);
+        const { error } = await supabase.from("anggota").upsert(rows, { onConflict: "id" });
+        if (error) throw new Error(`Anggota: ${error.message}`);
+      }
+      if (d.simpanan?.length) {
+        const rows = mapToDb(d.simpanan);
+        const { error } = await supabase.from("transaksi_simpanan").upsert(rows, { onConflict: "id" });
+        if (error) throw new Error(`Simpanan: ${error.message}`);
+      }
+      if (d.pinjaman?.length) {
+        const rows = mapToDb(d.pinjaman);
+        const { error } = await supabase.from("pinjaman").upsert(rows, { onConflict: "id" });
+        if (error) throw new Error(`Pinjaman: ${error.message}`);
+      }
+      if (d.potongan?.length) {
+        const rows = mapToDb(d.potongan);
+        const { error } = await supabase.from("potongan").upsert(rows, { onConflict: "id" });
+        if (error) throw new Error(`Potongan: ${error.message}`);
+      }
+      if (d.coa?.length) {
+        const rows = mapToDb(d.coa);
+        const { error } = await supabase.from("coa").upsert(rows, { onConflict: "kode" });
+        if (error) throw new Error(`COA: ${error.message}`);
+      }
+      if (d.jurnal?.length) {
+        const rows = mapToDb(d.jurnal);
+        const { error } = await supabase.from("jurnal_entries").upsert(rows, { onConflict: "id" });
+        if (error) throw new Error(`Jurnal: ${error.message}`);
+      }
+
+      setSuccessMsg("Restore berhasil! Data telah dipulihkan. Silakan refresh halaman.");
+      setRestorePreview(null);
+      setRestoreFile(null);
+      setRestoreData(null);
+    } catch (err) {
+      setRestoreError(`Gagal restore: ${(err as Error).message}`);
+    } finally {
+      setRestoreBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!activeModal) return;
@@ -368,27 +521,77 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
             )}
             {activeModal === "backup" && (
               <>
-                <p className="text-sm text-navy-300">Backup seluruh data koperasi ke file. Data yang di-backup meliputi anggota, simpanan, pinjaman, dan potongan.</p>
+                <p className="text-sm text-navy-300">Backup seluruh data koperasi ke file JSON. File akan otomatis ter-download ke komputer Anda.</p>
                 <div className="bg-navy-800/50 rounded-xl p-4 space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-navy-400">Terakhir Backup</span><span className="text-white">17 Mar 2026, 01:21</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-navy-400">Ukuran Data</span><span className="text-white">~2.4 MB</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-navy-400">Terakhir Backup</span><span className="text-white">{lastBackup || "Belum pernah"}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-navy-400">Data</span><span className="text-white">Anggota, Simpanan, Pinjaman, Potongan, COA, Jurnal</span></div>
                 </div>
-                <button type="button" disabled={saving} onClick={() => saveWithPersist("Backup berhasil! File tersimpan.")} className={btnPrimary}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <HardDrive className="w-4 h-4" />} Mulai Backup
+                {backupError && (
+                  <div className="flex items-center gap-2 bg-danger-600/15 border border-danger-600/30 rounded-xl px-4 py-3 text-sm text-danger-400">
+                    <AlertTriangle className="w-4 h-4 shrink-0" /> {backupError}
+                  </div>
+                )}
+                <button type="button" disabled={backupBusy} onClick={handleBackup} className={btnPrimary}>
+                  {backupBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Mulai Backup
                 </button>
+                <p className="text-xs text-navy-500">File backup akan disimpan di folder Download browser Anda dengan nama <span className="text-navy-300">backup-koperasi-[tanggal].json</span></p>
               </>
             )}
             {activeModal === "restore" && (
               <>
-                <p className="text-sm text-navy-300">Kembalikan data koperasi dari file backup sebelumnya. Pastikan file backup valid.</p>
+                <p className="text-sm text-navy-300">Kembalikan data koperasi dari file backup JSON. Pilih file yang sebelumnya di-backup dari menu Backup File Data.</p>
                 <div className="bg-warning-600/10 border border-warning-600/30 rounded-xl p-3 text-sm text-warning-400">
-                  Peringatan: Restore akan menimpa data saat ini. Pastikan Anda sudah backup terlebih dahulu.
+                  Peringatan: Restore akan menimpa data yang sama. Pastikan Anda sudah backup data saat ini terlebih dahulu.
                 </div>
-                <div className="border-2 border-dashed border-navy-600 rounded-xl p-8 text-center">
-                  <Upload className="w-8 h-8 text-navy-400 mx-auto mb-2" />
-                  <p className="text-sm text-navy-400">Pilih file backup untuk di-restore</p>
-                  <input type="file" accept=".json,.sql,.bak" className="mt-3 text-sm text-navy-300 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-accent-600 file:text-white hover:file:bg-accent-500 cursor-pointer" />
+                {restoreError && (
+                  <div className="flex items-center gap-2 bg-danger-600/15 border border-danger-600/30 rounded-xl px-4 py-3 text-sm text-danger-400">
+                    <AlertTriangle className="w-4 h-4 shrink-0" /> {restoreError}
+                  </div>
+                )}
+                <div
+                  className="border-2 border-dashed border-navy-600 rounded-xl p-8 text-center cursor-pointer hover:border-accent-500/50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {restoreFile ? (
+                    <>
+                      <FileCheck className="w-8 h-8 text-success-400 mx-auto mb-2" />
+                      <p className="text-sm text-success-400 font-medium">{restoreFile.name}</p>
+                      <p className="text-xs text-navy-400 mt-1">{(restoreFile.size / 1024).toFixed(1)} KB</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-navy-400 mx-auto mb-2" />
+                      <p className="text-sm text-navy-400">Klik untuk pilih file backup (.json)</p>
+                    </>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleRestoreFileSelect(f);
+                    }}
+                  />
                 </div>
+                {restorePreview && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-white">Data yang akan di-restore:</p>
+                    <div className="bg-navy-800/50 rounded-xl p-4 space-y-2">
+                      {Object.entries(restorePreview).map(([key, count]) => (
+                        <div key={key} className="flex justify-between text-sm">
+                          <span className="text-navy-400">{key}</span>
+                          <span className="text-white font-medium">{count} data</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-navy-500">Dibuat: {restoreData?.createdAt ? new Date(restoreData.createdAt).toLocaleString("id-ID") : "-"}</p>
+                    <button type="button" disabled={restoreBusy} onClick={handleRestoreConfirm} className={btnPrimary}>
+                      {restoreBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Konfirmasi Restore
+                    </button>
+                  </div>
+                )}
               </>
             )}
             {activeModal === "reindex" && (
@@ -500,7 +703,7 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
           </div>
           <div className="bg-navy-800/50 rounded-xl p-3">
             <p className="text-xs text-navy-400">Terakhir Backup</p>
-            <p className="text-sm font-medium text-white mt-1">17 Mar 2026, 01:21</p>
+            <p className="text-sm font-medium text-white mt-1">{lastBackup || "Belum pernah"}</p>
           </div>
           <div className="bg-navy-800/50 rounded-xl p-3">
             <p className="text-xs text-navy-400">Operator Aktif</p>
