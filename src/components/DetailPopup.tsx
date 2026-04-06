@@ -12,10 +12,14 @@ interface DetailPopupProps {
   children: React.ReactNode;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export default function DetailPopup({ open, onClose, title, filename = "detail", children }: DetailPopupProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const cachedBlob = useRef<Blob | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [cacheReady, setCacheReady] = useState(false);
 
   const stableOnClose = useCallback(() => onClose(), [onClose]);
 
@@ -28,16 +32,50 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
     return () => document.removeEventListener("keydown", onKey);
   }, [open, stableOnClose]);
 
+  useEffect(() => {
+    if (!open) {
+      cachedBlob.current = null;
+      setCacheReady(false);
+      return;
+    }
+    let cancelled = false;
+    const preCapture = async () => {
+      await sleep(500);
+      if (cancelled || !contentRef.current) return;
+      try {
+        const canvas = await html2canvas(contentRef.current, {
+          backgroundColor: "#0a1628",
+          scale: 2,
+          useCORS: true,
+        });
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92)
+        );
+        if (!cancelled && blob) {
+          cachedBlob.current = blob;
+          setCacheReady(true);
+        }
+      } catch { /* pre-capture failed, will capture on demand */ }
+    };
+    preCapture();
+    return () => { cancelled = true; };
+  }, [open]);
+
   if (!open) return null;
 
   const captureImage = async (): Promise<Blob | null> => {
+    if (cachedBlob.current) return cachedBlob.current;
     if (!contentRef.current) return null;
     const canvas = await html2canvas(contentRef.current, {
       backgroundColor: "#0a1628",
       scale: 2,
       useCORS: true,
     });
-    return new Promise((resolve) => canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92));
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92)
+    );
+    if (blob) cachedBlob.current = blob;
+    return blob;
   };
 
   const handlePrint = () => {
@@ -86,6 +124,9 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
     try {
       const blob = await captureImage();
       if (!blob) return;
+
+      await sleep(100);
+
       const file = new File([blob], `${filename}.jpg`, { type: "image/jpeg" });
 
       let shared = false;
@@ -108,7 +149,7 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
     } catch (err) {
       console.error("Share error:", err);
       try {
-        const blob = await captureImage();
+        const blob = cachedBlob.current || await captureImage();
         if (blob) triggerDownload(blob);
       } catch { /* final fallback failed */ }
     } finally {
