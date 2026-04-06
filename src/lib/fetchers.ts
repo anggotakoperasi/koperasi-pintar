@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Anggota, TransaksiSimpanan, Pinjaman, Potongan } from "@/data/mock";
+import type { Anggota, TransaksiSimpanan, Pinjaman, Potongan, COA, JurnalEntry } from "@/data/mock";
 
 function mapAnggota(row: any): Anggota {
   return {
@@ -68,6 +68,31 @@ function mapPotongan(row: any): Potongan {
   };
 }
 
+function mapCOA(row: any): COA {
+  return {
+    kode: row.kode,
+    nama: row.nama,
+    kelompok: row.kelompok,
+    subKelompok: row.sub_kelompok,
+    saldoNormal: row.saldo_normal,
+    isActive: row.is_active,
+  };
+}
+
+function mapJurnal(row: any): JurnalEntry {
+  return {
+    id: row.id,
+    tanggal: row.tanggal,
+    noBukti: row.no_bukti,
+    keterangan: row.keterangan,
+    refTabel: row.ref_tabel,
+    refId: row.ref_id,
+    akunKode: row.akun_kode,
+    debit: row.debit || 0,
+    kredit: row.kredit || 0,
+  };
+}
+
 // ===== READ =====
 
 export async function fetchAnggota(): Promise<Anggota[]> {
@@ -123,6 +148,36 @@ export function fetchPinjaman(): Promise<Pinjaman[]> {
 
 export function fetchPotongan(): Promise<Potongan[]> {
   return fetchAll("potongan", "bulan", false, mapPotongan);
+}
+
+export function fetchCOA(): Promise<COA[]> {
+  return fetchAll("coa", "kode", true, mapCOA);
+}
+
+export function fetchJurnalEntries(): Promise<JurnalEntry[]> {
+  return fetchAll("jurnal_entries", "tanggal", false, mapJurnal);
+}
+
+export async function fetchJurnalEntriesWithAkun(): Promise<JurnalEntry[]> {
+  const all: any[] = [];
+  const PAGE = 1000;
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from("jurnal_entries")
+      .select("*, coa(nama)")
+      .order("tanggal", { ascending: false })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return all.map((row) => ({
+    ...mapJurnal(row),
+    akunNama: row.coa?.nama || row.akun_kode,
+  }));
 }
 
 export async function searchAnggota(query: string): Promise<Anggota[]> {
@@ -200,6 +255,47 @@ export async function updateAnggota(id: string, updates: Partial<Anggota>) {
   if (error) throw error;
 }
 
+// ===== JOURNAL POSTING (DOUBLE-ENTRY) =====
+
+async function postJurnal(
+  tanggal: string,
+  noBukti: string,
+  keterangan: string,
+  refTabel: string,
+  refId: string,
+  lines: { akunKode: string; debit: number; kredit: number }[],
+) {
+  const entries = lines
+    .filter((l) => l.debit > 0 || l.kredit > 0)
+    .map((l, i) => ({
+      id: `JRN${Date.now()}${i}`,
+      tanggal,
+      no_bukti: noBukti,
+      keterangan,
+      ref_tabel: refTabel,
+      ref_id: refId,
+      akun_kode: l.akunKode,
+      debit: l.debit,
+      kredit: l.kredit,
+    }));
+  if (entries.length === 0) return;
+  const { error } = await supabase.from("jurnal_entries").insert(entries);
+  if (error) throw error;
+}
+
+const AKUN = {
+  KAS: "1100",
+  KAS_BENDAHARA: "1110",
+  BANK: "1120",
+  PIUTANG_PINJAMAN: "1200",
+  PIUTANG_JASA: "1210",
+  SIMP_POKOK: "2100",
+  SIMP_WAJIB: "2110",
+  SIMP_SUKARELA: "2120",
+  PENDAPATAN_JASA: "4100",
+  PENDAPATAN_ADMIN: "4200",
+};
+
 // ===== WRITE: TRANSAKSI SIMPANAN =====
 
 export async function insertTransaksiSimpanan(t: Omit<TransaksiSimpanan, "id">) {
@@ -225,6 +321,25 @@ export async function insertTransaksiSimpanan(t: Omit<TransaksiSimpanan, "id">) 
     const newVal = t.jenis === "setoran" ? current + t.jumlah : Math.max(0, current - t.jumlah);
     await supabase.from("anggota").update({ [field]: newVal }).eq("id", t.anggotaId);
   }
+
+  const akunSimpanan = t.kategori === "pokok" ? AKUN.SIMP_POKOK
+    : t.kategori === "wajib" ? AKUN.SIMP_WAJIB : AKUN.SIMP_SUKARELA;
+  const labelKat = t.kategori === "pokok" ? "Pokok" : t.kategori === "wajib" ? "Wajib" : "Sukarela";
+
+  if (t.jenis === "setoran") {
+    await postJurnal(t.tanggal, id, `Setoran Simpanan ${labelKat} - ${t.namaAnggota}`,
+      "transaksi_simpanan", id, [
+        { akunKode: AKUN.KAS, debit: t.jumlah, kredit: 0 },
+        { akunKode: akunSimpanan, debit: 0, kredit: t.jumlah },
+      ]);
+  } else {
+    await postJurnal(t.tanggal, id, `Pengambilan Simpanan ${labelKat} - ${t.namaAnggota}`,
+      "transaksi_simpanan", id, [
+        { akunKode: akunSimpanan, debit: t.jumlah, kredit: 0 },
+        { akunKode: AKUN.KAS, debit: 0, kredit: t.jumlah },
+      ]);
+  }
+
   return id;
 }
 
@@ -260,6 +375,13 @@ export async function insertPinjaman(p: Omit<Pinjaman, "id">) {
       sisa_pinjaman: (anggota.sisa_pinjaman || 0) + p.jumlahPinjaman,
     }).eq("id", p.anggotaId);
   }
+
+  await postJurnal(p.tanggalPinjam, id, `Pencairan Pinjaman ${p.jenisPinjaman} - ${p.namaAnggota}`,
+    "pinjaman", id, [
+      { akunKode: AKUN.PIUTANG_PINJAMAN, debit: p.jumlahPinjaman, kredit: 0 },
+      { akunKode: AKUN.KAS, debit: 0, kredit: p.jumlahPinjaman },
+    ]);
+
   return id;
 }
 
@@ -280,9 +402,81 @@ export async function bayarAngsuran(pinjamanId: string, jumlahPokok: number, jum
     status: sisaBaru === 0 ? "lancar" : pinj.status,
   }).eq("id", pinjamanId);
 
+  const { data: anggotaData } = await supabase
+    .from("anggota")
+    .select("sisa_pinjaman")
+    .eq("id", pinj.anggota_id)
+    .single();
+
   await supabase.from("anggota").update({
-    sisa_pinjaman: Math.max(0, (pinj.sisa_pinjaman || 0) - jumlahPokok),
+    sisa_pinjaman: Math.max(0, (anggotaData?.sisa_pinjaman || 0) - jumlahPokok),
   }).eq("id", pinj.anggota_id);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const bukti = `ANG${Date.now()}`;
+  const totalBayar = jumlahPokok + jumlahJasa;
+  const lines: { akunKode: string; debit: number; kredit: number }[] = [
+    { akunKode: AKUN.KAS, debit: totalBayar, kredit: 0 },
+    { akunKode: AKUN.PIUTANG_PINJAMAN, debit: 0, kredit: jumlahPokok },
+  ];
+  if (jumlahJasa > 0) {
+    lines.push({ akunKode: AKUN.PENDAPATAN_JASA, debit: 0, kredit: jumlahJasa });
+  }
+  await postJurnal(today, bukti, `Angsuran Pinjaman - ${pinj.nama_anggota}`,
+    "pinjaman", pinjamanId, lines);
+}
+
+// ===== WRITE: POTONGAN (with journal) =====
+
+export async function insertPotongan(p: Omit<Potongan, "id">) {
+  const id = `PT${Date.now()}`;
+  const { error } = await supabase.from("potongan").insert({
+    id,
+    anggota_id: p.anggotaId,
+    nama_anggota: p.namaAnggota,
+    bulan: p.bulan,
+    simpanan_wajib: p.simpananWajib,
+    angsuran_pinjaman: p.angsuranPinjaman,
+    jasa_pinjaman: p.jasaPinjaman,
+    total_potongan: p.totalPotongan,
+    status: p.status || "proses",
+  });
+  if (error) throw error;
+  return id;
+}
+
+export async function updatePotongan(id: string, updates: Partial<Potongan>) {
+  const mapped: any = {};
+  if (updates.simpananWajib !== undefined) mapped.simpanan_wajib = updates.simpananWajib;
+  if (updates.angsuranPinjaman !== undefined) mapped.angsuran_pinjaman = updates.angsuranPinjaman;
+  if (updates.jasaPinjaman !== undefined) mapped.jasa_pinjaman = updates.jasaPinjaman;
+  if (updates.totalPotongan !== undefined) mapped.total_potongan = updates.totalPotongan;
+  if (updates.status !== undefined) mapped.status = updates.status;
+  const { error } = await supabase.from("potongan").update(mapped).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deletePotongan(id: string) {
+  const { error } = await supabase.from("potongan").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function postPotonganJurnal(p: Potongan) {
+  const today = new Date().toISOString().slice(0, 10);
+  const lines: { akunKode: string; debit: number; kredit: number }[] = [
+    { akunKode: AKUN.KAS_BENDAHARA, debit: p.totalPotongan, kredit: 0 },
+  ];
+  if (p.simpananWajib > 0) {
+    lines.push({ akunKode: AKUN.SIMP_WAJIB, debit: 0, kredit: p.simpananWajib });
+  }
+  if (p.angsuranPinjaman > 0) {
+    lines.push({ akunKode: AKUN.PIUTANG_PINJAMAN, debit: 0, kredit: p.angsuranPinjaman });
+  }
+  if (p.jasaPinjaman > 0) {
+    lines.push({ akunKode: AKUN.PENDAPATAN_JASA, debit: 0, kredit: p.jasaPinjaman });
+  }
+  await postJurnal(today, p.id, `Potongan Gaji ${p.bulan} - ${p.namaAnggota}`,
+    "potongan", p.id, lines);
 }
 
 // ===== EXPORT CSV =====

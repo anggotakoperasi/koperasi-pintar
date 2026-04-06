@@ -20,8 +20,16 @@ DAFTAR FITUR PLATFORM:
 9. Notifikasi - Pemberitahuan real-time: pinjaman baru, setoran berhasil, potongan terkirim, backup berhasil, anggota baru. Klik untuk navigasi ke halaman terkait.
 10. Login & Keamanan - Role-based access (Super Admin, Bendahara, Sekretaris, Ketua, Pengawas, Anggota). Info login terakhir: waktu, device, IP address.
 
-ALUR AKUNTANSI:
-Transaksi -> Jurnal -> Buku Besar -> Laporan. Semua transaksi berbasis jurnal untuk rekonsiliasi dengan bank.`;
+ALUR AKUNTANSI (SUDAH TERINTEGRASI):
+Setiap transaksi (simpanan, pinjaman, potongan) otomatis menghasilkan jurnal double-entry:
+- Setoran Simpanan: Debit Kas (1100) → Kredit Simpanan Wajib/Sukarela (2110/2120)
+- Pengambilan Simpanan: Debit Simpanan → Kredit Kas
+- Pencairan Pinjaman: Debit Piutang Pinjaman (1200) → Kredit Kas (1100)
+- Angsuran Pinjaman: Debit Kas → Kredit Piutang + Kredit Pendapatan Jasa (4100)
+- Potongan Gaji: Debit Kas Bendahara (1110) → Kredit Simpanan Wajib + Kredit Piutang + Kredit Pendapatan Jasa
+Alur: Transaksi → Jurnal Otomatis → Buku Besar → Neraca Saldo → Laporan Keuangan (Neraca, Laba Rugi, Arus Kas).
+COA menggunakan standar koperasi Indonesia.
+Laporan Keuangan: Jurnal Umum, Buku Besar, Neraca Saldo (Trial Balance), Neraca, Laba Rugi, Arus Kas.`;
 
 export async function POST(req: NextRequest) {
   try {

@@ -57,6 +57,28 @@ export interface Potongan {
   status: "terkirim" | "proses" | "gagal";
 }
 
+export interface COA {
+  kode: string;
+  nama: string;
+  kelompok: "aset" | "kewajiban" | "ekuitas" | "pendapatan" | "beban";
+  subKelompok: string;
+  saldoNormal: "debit" | "kredit";
+  isActive: boolean;
+}
+
+export interface JurnalEntry {
+  id: string;
+  tanggal: string;
+  noBukti: string;
+  keterangan: string;
+  refTabel?: string;
+  refId?: string;
+  akunKode: string;
+  akunNama?: string;
+  debit: number;
+  kredit: number;
+}
+
 export function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",

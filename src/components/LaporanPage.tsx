@@ -23,12 +23,14 @@ import {
   Search,
 } from "lucide-react";
 import { formatRupiah } from "@/data/mock";
-import type { Anggota, TransaksiSimpanan, Pinjaman, Potongan } from "@/data/mock";
+import type { Anggota, TransaksiSimpanan, Pinjaman, Potongan, JurnalEntry, COA } from "@/data/mock";
 import {
   fetchAnggota,
   fetchTransaksiSimpanan,
   fetchPinjaman,
   fetchPotongan,
+  fetchCOA,
+  fetchJurnalEntriesWithAkun,
   exportCSV,
 } from "@/lib/fetchers";
 import DatePickerID from "./DatePickerID";
@@ -46,7 +48,9 @@ type ReportGenerator = (
   transaksi: TransaksiSimpanan[],
   pinjaman: Pinjaman[],
   potongan: Potongan[],
-  bulan: string
+  bulan: string,
+  jurnalEntries: JurnalEntry[],
+  coaList: COA[],
 ) => ReportResult;
 
 function fmtDate(d: string) {
@@ -539,13 +543,71 @@ const reportGenerators: Record<string, ReportGenerator> = {
     };
   },
 
-  "Neraca": (anggota, _, pinjaman) => {
+  "Neraca": (anggota, _, pinjaman, __, ___, jurnalEntries, coaList) => {
+    const hasJurnal = jurnalEntries.length > 0;
+    if (hasJurnal) {
+      const saldoPerAkun = buildSaldoPerAkun(jurnalEntries, coaList);
+      const asetRows: string[][] = [];
+      const kewajibanRows: string[][] = [];
+      const ekuitasRows: string[][] = [];
+      let totalAset = 0, totalKewajiban = 0, totalEkuitas = 0;
+      let no = 1;
+      for (const akun of coaList.filter(c => c.kelompok === "aset")) {
+        const saldo = saldoPerAkun[akun.kode] || 0;
+        if (saldo !== 0) {
+          asetRows.push([String(no++), `${akun.kode} - ${akun.nama}`, formatRupiah(saldo)]);
+          totalAset += saldo;
+        }
+      }
+      for (const akun of coaList.filter(c => c.kelompok === "kewajiban")) {
+        const saldo = saldoPerAkun[akun.kode] || 0;
+        if (saldo !== 0) {
+          kewajibanRows.push([String(no++), `${akun.kode} - ${akun.nama}`, formatRupiah(saldo)]);
+          totalKewajiban += saldo;
+        }
+      }
+      for (const akun of coaList.filter(c => c.kelompok === "ekuitas")) {
+        const saldo = saldoPerAkun[akun.kode] || 0;
+        if (saldo !== 0) {
+          ekuitasRows.push([String(no++), `${akun.kode} - ${akun.nama}`, formatRupiah(saldo)]);
+          totalEkuitas += saldo;
+        }
+      }
+      const selisih = totalAset - totalKewajiban - totalEkuitas;
+      return {
+        title: "Neraca",
+        subtitle: "Laporan Posisi Keuangan (dari Jurnal)",
+        headers: ["No", "Pos / Akun", "Jumlah"],
+        rows: [
+          ["", "ASET", ""],
+          ...asetRows,
+          ["", "Total Aset", formatRupiah(totalAset)],
+          ["", "", ""],
+          ["", "KEWAJIBAN", ""],
+          ...kewajibanRows,
+          ["", "Total Kewajiban", formatRupiah(totalKewajiban)],
+          ["", "", ""],
+          ["", "EKUITAS", ""],
+          ...ekuitasRows,
+          ["", "Total Ekuitas", formatRupiah(totalEkuitas)],
+          ["", "", ""],
+          ["", "Total Kewajiban + Ekuitas", formatRupiah(totalKewajiban + totalEkuitas)],
+          ["", selisih === 0 ? "✓ Neraca Balance" : `⚠ Selisih: ${formatRupiah(selisih)}`, ""],
+        ],
+        summary: [
+          { label: "Total Aset", value: formatRupiah(totalAset) },
+          { label: "Total Kewajiban", value: formatRupiah(totalKewajiban) },
+          { label: "Total Ekuitas", value: formatRupiah(totalEkuitas) },
+          { label: "Status", value: selisih === 0 ? "Balance ✓" : `Selisih ${formatRupiah(selisih)}` },
+        ],
+      };
+    }
     const aktif = anggota.filter(a => a.status === "aktif");
     const totSimp = aktif.reduce((s, a) => s + a.simpananPokok + a.simpananWajib + a.simpananSukarela, 0);
     const totSisaPinj = pinjaman.reduce((s, p) => s + p.sisaPinjaman, 0);
     const kas = totSimp - totSisaPinj * 0.5;
     return {
-      title: "Neraca (Estimasi)",
+      title: "Neraca (Estimasi — belum ada jurnal)",
       subtitle: "Laporan Posisi Keuangan",
       headers: ["No", "Pos", "Jumlah"],
       rows: [
@@ -563,13 +625,59 @@ const reportGenerators: Record<string, ReportGenerator> = {
     };
   },
 
-  "Laba Rugi": (anggota, _, pinjaman) => {
+  "Laba Rugi": (anggota, _, pinjaman, __, ___, jurnalEntries, coaList) => {
+    const hasJurnal = jurnalEntries.length > 0;
+    if (hasJurnal) {
+      const saldoPerAkun = buildSaldoPerAkun(jurnalEntries, coaList);
+      const pendapatanRows: string[][] = [];
+      const bebanRows: string[][] = [];
+      let totalPendapatan = 0, totalBeban = 0;
+      let no = 1;
+      for (const akun of coaList.filter(c => c.kelompok === "pendapatan")) {
+        const saldo = saldoPerAkun[akun.kode] || 0;
+        if (saldo !== 0) {
+          pendapatanRows.push([String(no++), `${akun.kode} - ${akun.nama}`, formatRupiah(saldo)]);
+          totalPendapatan += saldo;
+        }
+      }
+      for (const akun of coaList.filter(c => c.kelompok === "beban")) {
+        const saldo = saldoPerAkun[akun.kode] || 0;
+        if (saldo !== 0) {
+          bebanRows.push([String(no++), `${akun.kode} - ${akun.nama}`, formatRupiah(saldo)]);
+          totalBeban += saldo;
+        }
+      }
+      const shu = totalPendapatan - totalBeban;
+      return {
+        title: "Laporan Laba Rugi",
+        subtitle: "Periode Berjalan (dari Jurnal)",
+        headers: ["No", "Pos / Akun", "Jumlah"],
+        rows: [
+          ["", "PENDAPATAN", ""],
+          ...pendapatanRows,
+          ...(pendapatanRows.length === 0 ? [["", "(Belum ada pendapatan tercatat)", ""]] : []),
+          ["", "Total Pendapatan", formatRupiah(totalPendapatan)],
+          ["", "", ""],
+          ["", "BEBAN", ""],
+          ...bebanRows,
+          ...(bebanRows.length === 0 ? [["", "(Belum ada beban tercatat)", ""]] : []),
+          ["", "Total Beban", formatRupiah(totalBeban)],
+          ["", "", ""],
+          ["", "SHU (Sisa Hasil Usaha)", formatRupiah(shu)],
+        ],
+        summary: [
+          { label: "Total Pendapatan", value: formatRupiah(totalPendapatan) },
+          { label: "Total Beban", value: formatRupiah(totalBeban) },
+          { label: "SHU Bersih", value: formatRupiah(shu) },
+        ],
+      };
+    }
     const totSisaPinj = pinjaman.reduce((s, p) => s + p.sisaPinjaman, 0);
     const avgBunga = pinjaman.length > 0 ? pinjaman.reduce((s, p) => s + p.bungaPerBulan, 0) / pinjaman.length : 1;
     const pendapatanJasa = Math.round(totSisaPinj * avgBunga / 100 * 12);
     const biayaOps = Math.round(pendapatanJasa * 0.2);
     return {
-      title: "Laporan Laba Rugi (Estimasi)",
+      title: "Laporan Laba Rugi (Estimasi — belum ada jurnal)",
       subtitle: "Periode berjalan",
       headers: ["No", "Pos", "Jumlah"],
       rows: [
@@ -588,13 +696,54 @@ const reportGenerators: Record<string, ReportGenerator> = {
     };
   },
 
-  "Arus Kas": (anggota, transaksi, pinjaman) => {
+  "Arus Kas": (anggota, transaksi, pinjaman, __, ___, jurnalEntries) => {
+    const hasJurnal = jurnalEntries.length > 0;
+    if (hasJurnal) {
+      const kasAkun = ["1100", "1110", "1120"];
+      const kasEntries = jurnalEntries.filter(j => kasAkun.includes(j.akunKode));
+      const sorted = [...kasEntries].sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+      const totalMasuk = sorted.reduce((s, j) => s + j.debit, 0);
+      const totalKeluar = sorted.reduce((s, j) => s + j.kredit, 0);
+
+      const byKet = new Map<string, { masuk: number; keluar: number }>();
+      sorted.forEach(j => {
+        const key = j.keterangan.split(" - ")[0] || j.keterangan;
+        const existing = byKet.get(key) || { masuk: 0, keluar: 0 };
+        existing.masuk += j.debit;
+        existing.keluar += j.kredit;
+        byKet.set(key, existing);
+      });
+      let no = 1;
+      const rows: string[][] = [];
+      byKet.forEach((v, k) => {
+        rows.push([
+          String(no++), k,
+          v.masuk > 0 ? formatRupiah(v.masuk) : "-",
+          v.keluar > 0 ? formatRupiah(v.keluar) : "-",
+        ]);
+      });
+      rows.push(["", "", "", ""]);
+      rows.push(["", "Total Kas Masuk", formatRupiah(totalMasuk), ""]);
+      rows.push(["", "Total Kas Keluar", "", formatRupiah(totalKeluar)]);
+      rows.push(["", "Arus Kas Bersih", formatRupiah(totalMasuk - totalKeluar), ""]);
+      return {
+        title: "Laporan Arus Kas",
+        subtitle: `Dari jurnal (${kasEntries.length} entri kas)`,
+        headers: ["No", "Keterangan", "Masuk", "Keluar"],
+        rows,
+        summary: [
+          { label: "Total Kas Masuk", value: formatRupiah(totalMasuk) },
+          { label: "Total Kas Keluar", value: formatRupiah(totalKeluar) },
+          { label: "Arus Kas Bersih", value: formatRupiah(totalMasuk - totalKeluar) },
+        ],
+      };
+    }
     const totalSetoran = transaksi.filter(t => t.jenis === "setoran").reduce((s, t) => s + t.jumlah, 0);
     const totalPengambilan = transaksi.filter(t => t.jenis === "pengambilan").reduce((s, t) => s + t.jumlah, 0);
     const totalPinjBaru = pinjaman.reduce((s, p) => s + p.jumlahPinjaman, 0);
     const totalAngsuran = pinjaman.reduce((s, p) => s + (p.jumlahPinjaman - p.sisaPinjaman), 0);
     return {
-      title: "Laporan Arus Kas (Estimasi)",
+      title: "Laporan Arus Kas (Estimasi — belum ada jurnal)",
       subtitle: "Aliran kas masuk dan keluar",
       headers: ["No", "Keterangan", "Masuk", "Keluar"],
       rows: [
@@ -610,24 +759,122 @@ const reportGenerators: Record<string, ReportGenerator> = {
     };
   },
 
-  "Buku Besar": (_, transaksi) => {
-    const sorted = [...transaksi].sort((a, b) => a.tanggal.localeCompare(b.tanggal));
-    let saldo = 0;
+  "Buku Besar": (_, __, ___, ____, _____, jurnalEntries, coaList) => {
+    if (jurnalEntries.length > 0) {
+      const sorted = [...jurnalEntries].sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+      const rows: string[][] = [];
+      const saldoMap: Record<string, number> = {};
+      let no = 1;
+      sorted.forEach((j) => {
+        const akun = coaList.find(c => c.kode === j.akunKode);
+        const akunNama = j.akunNama || akun?.nama || j.akunKode;
+        const saldoNormal = akun?.saldoNormal || "debit";
+        if (!saldoMap[j.akunKode]) saldoMap[j.akunKode] = 0;
+        if (saldoNormal === "debit") {
+          saldoMap[j.akunKode] += j.debit - j.kredit;
+        } else {
+          saldoMap[j.akunKode] += j.kredit - j.debit;
+        }
+        rows.push([
+          String(no++), fmtDate(j.tanggal), j.noBukti,
+          `${j.akunKode} - ${akunNama}`,
+          j.keterangan,
+          j.debit > 0 ? formatRupiah(j.debit) : "-",
+          j.kredit > 0 ? formatRupiah(j.kredit) : "-",
+          formatRupiah(saldoMap[j.akunKode]),
+        ]);
+      });
+      const totalDebit = sorted.reduce((s, j) => s + j.debit, 0);
+      const totalKredit = sorted.reduce((s, j) => s + j.kredit, 0);
+      return {
+        title: "Buku Besar",
+        subtitle: `${sorted.length} entri jurnal`,
+        headers: ["No", "Tanggal", "No. Bukti", "Akun", "Keterangan", "Debit", "Kredit", "Saldo"],
+        rows,
+        summary: [
+          { label: "Total Debit", value: formatRupiah(totalDebit) },
+          { label: "Total Kredit", value: formatRupiah(totalKredit) },
+          { label: "Status", value: totalDebit === totalKredit ? "Balance ✓" : `Selisih ${formatRupiah(Math.abs(totalDebit - totalKredit))}` },
+        ],
+      };
+    }
     return {
-      title: "Buku Besar Simpanan",
-      subtitle: `${sorted.length} entri`,
-      headers: ["No", "Tanggal", "Keterangan", "Debit", "Kredit", "Saldo"],
-      rows: sorted.map((t, i) => {
-        if (t.jenis === "setoran") saldo += t.jumlah;
-        else saldo -= t.jumlah;
-        return [
-          String(i + 1), fmtDate(t.tanggal),
-          `${t.jenis === "setoran" ? "Setor" : "Ambil"} ${t.kategori} - ${t.namaAnggota}`,
-          t.jenis === "setoran" ? formatRupiah(t.jumlah) : "-",
-          t.jenis === "pengambilan" ? formatRupiah(t.jumlah) : "-",
-          formatRupiah(saldo),
-        ];
-      }),
+      title: "Buku Besar (Belum ada jurnal)",
+      subtitle: "Belum ada entri jurnal. Lakukan transaksi untuk mengisi buku besar.",
+      headers: ["No", "Tanggal", "No. Bukti", "Akun", "Keterangan", "Debit", "Kredit", "Saldo"],
+      rows: [],
+    };
+  },
+
+  "Neraca Saldo": (_, __, ___, ____, _____, jurnalEntries, coaList) => {
+    if (jurnalEntries.length === 0) {
+      return {
+        title: "Neraca Saldo",
+        subtitle: "Belum ada jurnal. Lakukan transaksi untuk melihat neraca saldo.",
+        headers: ["No", "Kode Akun", "Nama Akun", "Debit", "Kredit"],
+        rows: [],
+      };
+    }
+    const saldoPerAkun = buildSaldoPerAkun(jurnalEntries, coaList);
+    let totalDebit = 0, totalKredit = 0;
+    let no = 1;
+    const rows: string[][] = [];
+    for (const akun of coaList) {
+      const saldo = saldoPerAkun[akun.kode] || 0;
+      if (saldo === 0) continue;
+      const isDebitNormal = akun.saldoNormal === "debit";
+      const debit = isDebitNormal ? saldo : 0;
+      const kredit = isDebitNormal ? 0 : saldo;
+      totalDebit += debit;
+      totalKredit += kredit;
+      rows.push([
+        String(no++), akun.kode, akun.nama,
+        debit > 0 ? formatRupiah(debit) : "-",
+        kredit > 0 ? formatRupiah(kredit) : "-",
+      ]);
+    }
+    rows.push(["", "", "Total", formatRupiah(totalDebit), formatRupiah(totalKredit)]);
+    return {
+      title: "Neraca Saldo (Trial Balance)",
+      subtitle: `${rows.length - 1} akun aktif`,
+      headers: ["No", "Kode Akun", "Nama Akun", "Debit", "Kredit"],
+      rows,
+      summary: [
+        { label: "Total Debit", value: formatRupiah(totalDebit) },
+        { label: "Total Kredit", value: formatRupiah(totalKredit) },
+        { label: "Status", value: totalDebit === totalKredit ? "Balance ✓" : `Selisih ${formatRupiah(Math.abs(totalDebit - totalKredit))}` },
+      ],
+    };
+  },
+
+  "Jurnal Umum": (_, __, ___, ____, _____, jurnalEntries) => {
+    if (jurnalEntries.length === 0) {
+      return {
+        title: "Jurnal Umum",
+        subtitle: "Belum ada entri jurnal. Lakukan transaksi untuk mengisi jurnal.",
+        headers: ["No", "Tanggal", "No. Bukti", "Keterangan", "Akun", "Debit", "Kredit"],
+        rows: [],
+      };
+    }
+    const sorted = [...jurnalEntries].sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+    const totalD = sorted.reduce((s, j) => s + j.debit, 0);
+    const totalK = sorted.reduce((s, j) => s + j.kredit, 0);
+    return {
+      title: "Jurnal Umum",
+      subtitle: `${sorted.length} entri jurnal`,
+      headers: ["No", "Tanggal", "No. Bukti", "Keterangan", "Akun", "Debit", "Kredit"],
+      rows: sorted.map((j, i) => [
+        String(i + 1), fmtDate(j.tanggal), j.noBukti, j.keterangan,
+        `${j.akunKode} - ${j.akunNama || j.akunKode}`,
+        j.debit > 0 ? formatRupiah(j.debit) : "-",
+        j.kredit > 0 ? formatRupiah(j.kredit) : "-",
+      ]),
+      summary: [
+        { label: "Total Debit", value: formatRupiah(totalD) },
+        { label: "Total Kredit", value: formatRupiah(totalK) },
+        { label: "Balance Check", value: totalD === totalK ? "Balance ✓" : `Selisih ${formatRupiah(Math.abs(totalD - totalK))}` },
+        { label: "Jumlah Entri", value: String(sorted.length) },
+      ],
     };
   },
 
@@ -647,6 +894,22 @@ const reportGenerators: Record<string, ReportGenerator> = {
     };
   },
 };
+
+function buildSaldoPerAkun(jurnalEntries: JurnalEntry[], coaList: COA[]): Record<string, number> {
+  const saldo: Record<string, number> = {};
+  const coaMap = new Map(coaList.map(c => [c.kode, c]));
+  jurnalEntries.forEach(j => {
+    const akun = coaMap.get(j.akunKode);
+    if (!akun) return;
+    if (!saldo[j.akunKode]) saldo[j.akunKode] = 0;
+    if (akun.saldoNormal === "debit") {
+      saldo[j.akunKode] += j.debit - j.kredit;
+    } else {
+      saldo[j.akunKode] += j.kredit - j.debit;
+    }
+  });
+  return saldo;
+}
 
 function getMostCommon(arr: string[]): string {
   const counts: Record<string, number> = {};
@@ -700,7 +963,7 @@ const laporanCategories = [
     title: "Laporan Keuangan",
     icon: BarChart3,
     color: "cyan",
-    items: ["Neraca", "Laba Rugi", "Arus Kas", "Buku Besar", "Grafik Tren 3 Tahun"],
+    items: ["Jurnal Umum", "Buku Besar", "Neraca Saldo", "Neraca", "Laba Rugi", "Arus Kas", "Grafik Tren 3 Tahun"],
   },
 ];
 
@@ -732,6 +995,8 @@ export default function LaporanPage() {
   const [allTransaksi, setAllTransaksi] = useState<TransaksiSimpanan[]>([]);
   const [allPinjaman, setAllPinjaman] = useState<Pinjaman[]>([]);
   const [allPotongan, setAllPotongan] = useState<Potongan[]>([]);
+  const [allJurnal, setAllJurnal] = useState<JurnalEntry[]>([]);
+  const [allCOA, setAllCOA] = useState<COA[]>([]);
   const [selectedBulan, setSelectedBulan] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -742,13 +1007,17 @@ export default function LaporanPage() {
     if (dataLoaded) return;
     setLoading(true);
     try {
-      const [a, t, p, pot] = await Promise.all([
+      const [a, t, p, pot, coa, jurnal] = await Promise.all([
         fetchAnggota(), fetchTransaksiSimpanan(), fetchPinjaman(), fetchPotongan(),
+        fetchCOA().catch(() => [] as COA[]),
+        fetchJurnalEntriesWithAkun().catch(() => [] as JurnalEntry[]),
       ]);
       setAllAnggota(a);
       setAllTransaksi(t);
       setAllPinjaman(p);
       setAllPotongan(pot);
+      setAllCOA(coa);
+      setAllJurnal(jurnal);
       setDataLoaded(true);
     } catch (err) {
       console.error("Failed to load data:", err);
@@ -762,7 +1031,7 @@ export default function LaporanPage() {
   const openReport = (reportName: string) => {
     const generator = reportGenerators[reportName];
     if (!generator) return;
-    const result = generator(allAnggota, allTransaksi, allPinjaman, allPotongan, selectedBulan);
+    const result = generator(allAnggota, allTransaksi, allPinjaman, allPotongan, selectedBulan, allJurnal, allCOA);
     setReport(result);
     setReportSearch("");
     setReportFilter("semua");
@@ -858,7 +1127,7 @@ export default function LaporanPage() {
             <h3 className="text-lg font-semibold text-white">Cetak Laporan</h3>
             <p className="text-sm text-navy-400">
               {loading ? "Memuat data..." : dataLoaded
-                ? `${allAnggota.length} anggota · ${allTransaksi.length} transaksi · ${allPinjaman.length} pinjaman — Klik laporan untuk preview`
+                ? `${allAnggota.length} anggota · ${allTransaksi.length} transaksi · ${allPinjaman.length} pinjaman · ${allJurnal.length} jurnal — Klik laporan untuk preview`
                 : "Pilih jenis laporan untuk dicetak atau di-export"}
             </p>
           </div>

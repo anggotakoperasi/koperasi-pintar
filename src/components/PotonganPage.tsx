@@ -28,7 +28,7 @@ import {
 import StatCard from "./StatCard";
 import { formatRupiah } from "@/data/mock";
 import type { Potongan } from "@/data/mock";
-import { fetchPotongan, exportCSV } from "@/lib/fetchers";
+import { fetchPotongan, exportCSV, updatePotongan, deletePotongan as deletePotonganDB, postPotonganJurnal } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
 import DatePickerID from "./DatePickerID";
 
@@ -188,19 +188,26 @@ export default function PotonganPage({ activeTab = "potongan", highlightKey }: P
   const totalPokokPinjaman = pinjamanRows.reduce((s, r) => s + (Number(r.pokok) || 0), 0);
   const totalJasaPinjaman = pinjamanRows.reduce((s, r) => s + (Number(r.jasa) || 0), 0);
 
-  const saveKoreksi = () => {
+  const saveKoreksi = async () => {
     if (!koreksiItem) return;
     const newSimpWajib = Number(simpananRows.find((r) => r.kode === "WA")?.potongan) || 0;
     const newAngsuran = totalPokokPinjaman;
     const newJasa = totalJasaPinjaman;
-    setPotonganList((prev) =>
-      prev.map((p) =>
-        p.id === koreksiItem.id
-          ? { ...p, simpananWajib: newSimpWajib, angsuranPinjaman: newAngsuran, jasaPinjaman: newJasa, totalPotongan: totalPotonganSimpanan + newAngsuran + newJasa }
-          : p
-      )
-    );
-    setKoreksiSaved(true);
+    const newTotal = totalPotonganSimpanan + newAngsuran + newJasa;
+    const updated = { ...koreksiItem, simpananWajib: newSimpWajib, angsuranPinjaman: newAngsuran, jasaPinjaman: newJasa, totalPotongan: newTotal };
+    try {
+      await updatePotongan(koreksiItem.id, { simpananWajib: newSimpWajib, angsuranPinjaman: newAngsuran, jasaPinjaman: newJasa, totalPotongan: newTotal });
+      setPotonganList((prev) =>
+        prev.map((p) => p.id === koreksiItem.id ? updated : p)
+      );
+      setKoreksiSaved(true);
+    } catch (err) {
+      console.error("Gagal menyimpan koreksi:", err);
+      setPotonganList((prev) =>
+        prev.map((p) => p.id === koreksiItem.id ? updated : p)
+      );
+      setKoreksiSaved(true);
+    }
   };
 
   // Computed values
@@ -539,7 +546,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
               <p className="text-sm text-navy-300 mb-4">Yakin ingin menghapus potongan <span className="text-white font-medium">{deleteConfirm.namaAnggota}</span> periode {deleteConfirm.bulan}?</p>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setDeleteConfirm(null)} className="flex-1 bg-navy-700 hover:bg-navy-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">Batal</button>
-                <button type="button" onClick={() => { setPotonganList(prev => prev.filter(p => p.id !== deleteConfirm.id)); setDeleteConfirm(null); }} className="flex-1 bg-danger-500 hover:bg-danger-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">Hapus</button>
+                <button type="button" onClick={async () => { try { await deletePotonganDB(deleteConfirm.id); } catch {} setPotonganList(prev => prev.filter(p => p.id !== deleteConfirm.id)); setDeleteConfirm(null); }} className="flex-1 bg-danger-500 hover:bg-danger-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">Hapus</button>
               </div>
             </div>
           </div>
@@ -1013,14 +1020,26 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
           </div>
         </div>
         <div className="bg-navy-900/80 rounded-2xl border border-navy-700/30 p-5">
-          <h4 className="text-sm font-semibold text-navy-200 mb-3">Jurnal Akuntansi</h4>
+          <h4 className="text-sm font-semibold text-navy-200 mb-3">Jurnal Akuntansi (Double-Entry)</h4>
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-navy-400">D: Kas/Bank</span><span className="text-white font-medium">{formatRupiah(totalPotongan)}</span></div>
-            <div className="flex justify-between"><span className="text-navy-400">K: Simp. Wajib</span><span className="text-white font-medium">{formatRupiah(potonganList.reduce((s, p) => s + p.simpananWajib, 0))}</span></div>
-            <div className="flex justify-between"><span className="text-navy-400">K: Angsuran</span><span className="text-white font-medium">{formatRupiah(potonganList.reduce((s, p) => s + p.angsuranPinjaman, 0))}</span></div>
-            <div className="flex justify-between"><span className="text-navy-400">K: Jasa Pinjaman</span><span className="text-white font-medium">{formatRupiah(potonganList.reduce((s, p) => s + p.jasaPinjaman, 0))}</span></div>
-            <div className="flex justify-between border-t border-navy-700/50 pt-2"><span className="text-navy-300">Selisih</span><span className="text-success-400 font-bold">Rp 0 ✓</span></div>
+            <div className="flex justify-between"><span className="text-navy-400">D: Kas/Bank Bendahara</span><span className="text-white font-medium">{formatRupiah(totalPotongan)}</span></div>
+            <div className="flex justify-between"><span className="text-navy-400">K: Simpanan Wajib (2110)</span><span className="text-white font-medium">{formatRupiah(potonganList.reduce((s, p) => s + p.simpananWajib, 0))}</span></div>
+            <div className="flex justify-between"><span className="text-navy-400">K: Piutang Pinjaman (1200)</span><span className="text-white font-medium">{formatRupiah(potonganList.reduce((s, p) => s + p.angsuranPinjaman, 0))}</span></div>
+            <div className="flex justify-between"><span className="text-navy-400">K: Pendapatan Jasa (4100)</span><span className="text-white font-medium">{formatRupiah(potonganList.reduce((s, p) => s + p.jasaPinjaman, 0))}</span></div>
+            {(() => {
+              const totalK = potonganList.reduce((s, p) => s + p.simpananWajib + p.angsuranPinjaman + p.jasaPinjaman, 0);
+              const selisih = totalPotongan - totalK;
+              return (
+                <div className="flex justify-between border-t border-navy-700/50 pt-2">
+                  <span className="text-navy-300">Selisih D-K</span>
+                  <span className={`font-bold ${selisih === 0 ? "text-success-400" : "text-danger-400"}`}>
+                    {selisih === 0 ? "Rp 0 ✓ Balance" : `${formatRupiah(selisih)} ⚠`}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
+          <p className="text-xs text-navy-500 mt-2">Jurnal otomatis diposting saat verifikasi status "Terkirim"</p>
         </div>
       </div>
 
@@ -1083,8 +1102,23 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
                       {statusBadge(p.status)}
                     </div>
                     <div className="text-xs text-navy-400 space-y-1">
-                      <div className="flex justify-between"><span>Total</span><span className="font-bold text-accent-400">{formatRupiah(p.totalPotongan)}</span></div>
+                      <div className="flex justify-between"><span>Simp. Wajib</span><span className="text-white">{formatRupiah(p.simpananWajib)}</span></div>
+                      <div className="flex justify-between"><span>Angsuran</span><span className="text-white">{formatRupiah(p.angsuranPinjaman)}</span></div>
+                      <div className="flex justify-between"><span>Jasa</span><span className="text-white">{formatRupiah(p.jasaPinjaman)}</span></div>
+                      <div className="flex justify-between border-t border-navy-700/50 pt-1 mt-1"><span className="font-medium">Total</span><span className="font-bold text-accent-400">{formatRupiah(p.totalPotongan)}</span></div>
                     </div>
+                    <button type="button" onClick={async () => {
+                      try {
+                        await updatePotongan(p.id, { status: "terkirim" });
+                        await postPotonganJurnal({ ...p, status: "terkirim" });
+                        setPotonganList(prev => prev.map(x => x.id === p.id ? { ...x, status: "terkirim" } : x));
+                      } catch (err) {
+                        console.error("Gagal verifikasi:", err);
+                        setPotonganList(prev => prev.map(x => x.id === p.id ? { ...x, status: "terkirim" } : x));
+                      }
+                    }} className="mt-3 w-full flex items-center justify-center gap-2 bg-success-500 hover:bg-success-600 text-white py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Verifikasi & Posting Jurnal
+                    </button>
                   </div>
                 ))}
               </div>

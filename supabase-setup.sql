@@ -71,7 +71,68 @@ CREATE TABLE IF NOT EXISTS potongan (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 5. AUTO-UPDATE updated_at
+-- 5. CHART OF ACCOUNTS (COA)
+CREATE TABLE IF NOT EXISTS coa (
+  kode TEXT PRIMARY KEY,
+  nama TEXT NOT NULL,
+  kelompok TEXT NOT NULL CHECK (kelompok IN ('aset', 'kewajiban', 'ekuitas', 'pendapatan', 'beban')),
+  sub_kelompok TEXT NOT NULL DEFAULT '',
+  saldo_normal TEXT NOT NULL CHECK (saldo_normal IN ('debit', 'kredit')),
+  is_active BOOLEAN NOT NULL DEFAULT true
+);
+
+-- 6. JURNAL ENTRIES (double-entry)
+CREATE TABLE IF NOT EXISTS jurnal_entries (
+  id TEXT PRIMARY KEY,
+  tanggal DATE NOT NULL,
+  no_bukti TEXT NOT NULL,
+  keterangan TEXT NOT NULL,
+  ref_tabel TEXT,
+  ref_id TEXT,
+  akun_kode TEXT NOT NULL REFERENCES coa(kode),
+  debit BIGINT NOT NULL DEFAULT 0,
+  kredit BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_jurnal_tanggal ON jurnal_entries(tanggal);
+CREATE INDEX IF NOT EXISTS idx_jurnal_akun ON jurnal_entries(akun_kode);
+CREATE INDEX IF NOT EXISTS idx_jurnal_nobukti ON jurnal_entries(no_bukti);
+CREATE INDEX IF NOT EXISTS idx_jurnal_ref ON jurnal_entries(ref_tabel, ref_id);
+
+ALTER TABLE jurnal_entries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read jurnal" ON jurnal_entries FOR SELECT USING (true);
+CREATE POLICY "Allow public insert jurnal" ON jurnal_entries FOR INSERT WITH CHECK (true);
+
+ALTER TABLE coa ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read coa" ON coa FOR SELECT USING (true);
+CREATE POLICY "Allow public insert coa" ON coa FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update coa" ON coa FOR UPDATE USING (true) WITH CHECK (true);
+
+-- SEED COA
+INSERT INTO coa (kode, nama, kelompok, sub_kelompok, saldo_normal) VALUES
+  ('1100', 'Kas',                        'aset',       'Aset Lancar',       'debit'),
+  ('1110', 'Kas Bendahara',              'aset',       'Aset Lancar',       'debit'),
+  ('1120', 'Bank',                       'aset',       'Aset Lancar',       'debit'),
+  ('1200', 'Piutang Pinjaman Anggota',   'aset',       'Aset Lancar',       'debit'),
+  ('1210', 'Piutang Jasa Pinjaman',      'aset',       'Aset Lancar',       'debit'),
+  ('2100', 'Simpanan Pokok',             'kewajiban',  'Simpanan Anggota',  'kredit'),
+  ('2110', 'Simpanan Wajib',             'kewajiban',  'Simpanan Anggota',  'kredit'),
+  ('2120', 'Simpanan Sukarela',          'kewajiban',  'Simpanan Anggota',  'kredit'),
+  ('2130', 'Simpanan Lain-lain',         'kewajiban',  'Simpanan Anggota',  'kredit'),
+  ('2200', 'Dana SHU Belum Dibagi',      'kewajiban',  'Kewajiban Lain',    'kredit'),
+  ('3100', 'Modal Koperasi',             'ekuitas',    'Modal',             'kredit'),
+  ('3200', 'SHU Tahun Berjalan',         'ekuitas',    'Modal',             'kredit'),
+  ('4100', 'Pendapatan Jasa Pinjaman',   'pendapatan', 'Pendapatan Usaha',  'kredit'),
+  ('4200', 'Pendapatan Administrasi',    'pendapatan', 'Pendapatan Usaha',  'kredit'),
+  ('4300', 'Pendapatan Lain-lain',       'pendapatan', 'Pendapatan Lain',   'kredit'),
+  ('5100', 'Beban Operasional',          'beban',      'Beban Usaha',       'debit'),
+  ('5200', 'Beban Administrasi',         'beban',      'Beban Usaha',       'debit'),
+  ('5300', 'Beban Penyisihan Piutang',   'beban',      'Beban Usaha',       'debit'),
+  ('5400', 'Beban Lain-lain',            'beban',      'Beban Lain',        'debit')
+ON CONFLICT (kode) DO NOTHING;
+
+-- 7. AUTO-UPDATE updated_at
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -173,4 +234,57 @@ INSERT INTO potongan (id, anggota_id, nama_anggota, bulan, simpanan_wajib, angsu
 ('PT006', 'A006', 'BRIPKA RINA AGUSTINA', 'Maret 2026', 500000, 750000, 75000, 1325000, 'terkirim'),
 ('PT007', 'A007', 'AIPDA BAMBANG IRAWAN', 'Maret 2026', 500000, 833333, 200000, 1533333, 'proses'),
 ('PT008', 'A008', 'BRIGADIR YUSUF MAULANA', 'Maret 2026', 500000, 1041667, 312500, 1854167, 'gagal')
+ON CONFLICT (id) DO NOTHING;
+
+-- JURNAL ENTRIES (seed dari transaksi simpanan yang sudah ada)
+INSERT INTO jurnal_entries (id, tanggal, no_bukti, keterangan, ref_tabel, ref_id, akun_kode, debit, kredit) VALUES
+-- Setoran Simpanan Wajib
+('JRN_TS001_D', '2026-03-01', 'TS001', 'Setoran Simpanan Wajib - BRIPKA AHMAD SURYANA', 'transaksi_simpanan', 'TS001', '1100', 500000, 0),
+('JRN_TS001_K', '2026-03-01', 'TS001', 'Setoran Simpanan Wajib - BRIPKA AHMAD SURYANA', 'transaksi_simpanan', 'TS001', '2110', 0, 500000),
+('JRN_TS002_D', '2026-03-01', 'TS002', 'Setoran Simpanan Wajib - BRIGADIR DEDI KUSNADI', 'transaksi_simpanan', 'TS002', '1100', 500000, 0),
+('JRN_TS002_K', '2026-03-01', 'TS002', 'Setoran Simpanan Wajib - BRIGADIR DEDI KUSNADI', 'transaksi_simpanan', 'TS002', '2110', 0, 500000),
+('JRN_TS003_D', '2026-03-02', 'TS003', 'Setoran Simpanan Sukarela - BRIPKA AHMAD SURYANA', 'transaksi_simpanan', 'TS003', '1100', 2000000, 0),
+('JRN_TS003_K', '2026-03-02', 'TS003', 'Setoran Simpanan Sukarela - BRIPKA AHMAD SURYANA', 'transaksi_simpanan', 'TS003', '2120', 0, 2000000),
+('JRN_TS004_D', '2026-03-03', 'TS004', 'Pengambilan Simpanan Sukarela - BRIPTU SITI NURHALIZA', 'transaksi_simpanan', 'TS004', '2120', 500000, 0),
+('JRN_TS004_K', '2026-03-03', 'TS004', 'Pengambilan Simpanan Sukarela - BRIPTU SITI NURHALIZA', 'transaksi_simpanan', 'TS004', '1100', 0, 500000),
+('JRN_TS005_D', '2026-03-05', 'TS005', 'Setoran Simpanan Sukarela - IPDA RIZKY PRATAMA', 'transaksi_simpanan', 'TS005', '1100', 3000000, 0),
+('JRN_TS005_K', '2026-03-05', 'TS005', 'Setoran Simpanan Sukarela - IPDA RIZKY PRATAMA', 'transaksi_simpanan', 'TS005', '2120', 0, 3000000),
+('JRN_TS006_D', '2026-03-07', 'TS006', 'Setoran Simpanan Wajib - AIPTU HENDRA WIJAYA', 'transaksi_simpanan', 'TS006', '1100', 500000, 0),
+('JRN_TS006_K', '2026-03-07', 'TS006', 'Setoran Simpanan Wajib - AIPTU HENDRA WIJAYA', 'transaksi_simpanan', 'TS006', '2110', 0, 500000),
+('JRN_TS007_D', '2026-03-10', 'TS007', 'Setoran Simpanan Sukarela - IPTU FARHAN HIDAYAT', 'transaksi_simpanan', 'TS007', '1100', 1500000, 0),
+('JRN_TS007_K', '2026-03-10', 'TS007', 'Setoran Simpanan Sukarela - IPTU FARHAN HIDAYAT', 'transaksi_simpanan', 'TS007', '2120', 0, 1500000),
+('JRN_TS008_D', '2026-03-12', 'TS008', 'Setoran Simpanan Wajib - BRIPKA RINA AGUSTINA', 'transaksi_simpanan', 'TS008', '1100', 500000, 0),
+('JRN_TS008_K', '2026-03-12', 'TS008', 'Setoran Simpanan Wajib - BRIPKA RINA AGUSTINA', 'transaksi_simpanan', 'TS008', '2110', 0, 500000),
+-- Pencairan Pinjaman (seed dari pinjaman yang ada)
+('JRN_P001_D', '2024-04-15', 'P001', 'Pencairan Pinjaman Reguler - BRIPKA AHMAD SURYANA', 'pinjaman', 'P001', '1200', 25000000, 0),
+('JRN_P001_K', '2024-04-15', 'P001', 'Pencairan Pinjaman Reguler - BRIPKA AHMAD SURYANA', 'pinjaman', 'P001', '1100', 0, 25000000),
+('JRN_P002_D', '2024-06-20', 'P002', 'Pencairan Pinjaman Reguler - BRIGADIR DEDI KUSNADI', 'pinjaman', 'P002', '1200', 20000000, 0),
+('JRN_P002_K', '2024-06-20', 'P002', 'Pencairan Pinjaman Reguler - BRIGADIR DEDI KUSNADI', 'pinjaman', 'P002', '1100', 0, 20000000),
+('JRN_P003_D', '2024-01-10', 'P003', 'Pencairan Pinjaman Menengah - AIPTU HENDRA WIJAYA', 'pinjaman', 'P003', '1200', 30000000, 0),
+('JRN_P003_K', '2024-01-10', 'P003', 'Pencairan Pinjaman Menengah - AIPTU HENDRA WIJAYA', 'pinjaman', 'P003', '1100', 0, 30000000),
+('JRN_P004_D', '2025-05-18', 'P004', 'Pencairan Pinjaman Reguler - BRIPTU SITI NURHALIZA', 'pinjaman', 'P004', '1200', 15000000, 0),
+('JRN_P004_K', '2025-05-18', 'P004', 'Pencairan Pinjaman Reguler - BRIPTU SITI NURHALIZA', 'pinjaman', 'P004', '1100', 0, 15000000),
+('JRN_P005_D', '2023-05-05', 'P005', 'Pencairan Pinjaman Besar - IPDA RIZKY PRATAMA', 'pinjaman', 'P005', '1200', 35000000, 0),
+('JRN_P005_K', '2023-05-05', 'P005', 'Pencairan Pinjaman Besar - IPDA RIZKY PRATAMA', 'pinjaman', 'P005', '1100', 0, 35000000),
+-- Potongan yang sudah terkirim (posting jurnal)
+('JRN_PT001_D', '2026-03-01', 'PT001', 'Potongan Gaji Maret 2026 - BRIPKA AHMAD SURYANA', 'potongan', 'PT001', '1110', 1645834, 0),
+('JRN_PT001_K1', '2026-03-01', 'PT001', 'Potongan Gaji Maret 2026 - BRIPKA AHMAD SURYANA', 'potongan', 'PT001', '2110', 0, 500000),
+('JRN_PT001_K2', '2026-03-01', 'PT001', 'Potongan Gaji Maret 2026 - BRIPKA AHMAD SURYANA', 'potongan', 'PT001', '1200', 0, 1041667),
+('JRN_PT001_K3', '2026-03-01', 'PT001', 'Potongan Gaji Maret 2026 - BRIPKA AHMAD SURYANA', 'potongan', 'PT001', '4100', 0, 104167),
+('JRN_PT002_D', '2026-03-01', 'PT002', 'Potongan Gaji Maret 2026 - BRIGADIR DEDI KUSNADI', 'potongan', 'PT002', '1110', 1416666, 0),
+('JRN_PT002_K1', '2026-03-01', 'PT002', 'Potongan Gaji Maret 2026 - BRIGADIR DEDI KUSNADI', 'potongan', 'PT002', '2110', 0, 500000),
+('JRN_PT002_K2', '2026-03-01', 'PT002', 'Potongan Gaji Maret 2026 - BRIGADIR DEDI KUSNADI', 'potongan', 'PT002', '1200', 0, 833333),
+('JRN_PT002_K3', '2026-03-01', 'PT002', 'Potongan Gaji Maret 2026 - BRIGADIR DEDI KUSNADI', 'potongan', 'PT002', '4100', 0, 83333),
+('JRN_PT003_D', '2026-03-01', 'PT003', 'Potongan Gaji Maret 2026 - AIPTU HENDRA WIJAYA', 'potongan', 'PT003', '1110', 1583333, 0),
+('JRN_PT003_K1', '2026-03-01', 'PT003', 'Potongan Gaji Maret 2026 - AIPTU HENDRA WIJAYA', 'potongan', 'PT003', '2110', 0, 500000),
+('JRN_PT003_K2', '2026-03-01', 'PT003', 'Potongan Gaji Maret 2026 - AIPTU HENDRA WIJAYA', 'potongan', 'PT003', '1200', 0, 833333),
+('JRN_PT003_K3', '2026-03-01', 'PT003', 'Potongan Gaji Maret 2026 - AIPTU HENDRA WIJAYA', 'potongan', 'PT003', '4100', 0, 250000),
+('JRN_PT005_D', '2026-03-01', 'PT005', 'Potongan Gaji Maret 2026 - IPDA RIZKY PRATAMA', 'potongan', 'PT005', '1110', 1708333, 0),
+('JRN_PT005_K1', '2026-03-01', 'PT005', 'Potongan Gaji Maret 2026 - IPDA RIZKY PRATAMA', 'potongan', 'PT005', '2110', 0, 500000),
+('JRN_PT005_K2', '2026-03-01', 'PT005', 'Potongan Gaji Maret 2026 - IPDA RIZKY PRATAMA', 'potongan', 'PT005', '1200', 0, 972222),
+('JRN_PT005_K3', '2026-03-01', 'PT005', 'Potongan Gaji Maret 2026 - IPDA RIZKY PRATAMA', 'potongan', 'PT005', '4100', 0, 236111),
+('JRN_PT006_D', '2026-03-01', 'PT006', 'Potongan Gaji Maret 2026 - BRIPKA RINA AGUSTINA', 'potongan', 'PT006', '1110', 1325000, 0),
+('JRN_PT006_K1', '2026-03-01', 'PT006', 'Potongan Gaji Maret 2026 - BRIPKA RINA AGUSTINA', 'potongan', 'PT006', '2110', 0, 500000),
+('JRN_PT006_K2', '2026-03-01', 'PT006', 'Potongan Gaji Maret 2026 - BRIPKA RINA AGUSTINA', 'potongan', 'PT006', '1200', 0, 750000),
+('JRN_PT006_K3', '2026-03-01', 'PT006', 'Potongan Gaji Maret 2026 - BRIPKA RINA AGUSTINA', 'potongan', 'PT006', '4100', 0, 75000)
 ON CONFLICT (id) DO NOTHING;
