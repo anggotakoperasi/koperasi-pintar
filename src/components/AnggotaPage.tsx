@@ -264,9 +264,12 @@ export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedCle
       await refreshList();
       setAddOpen(false);
       setFeedback({ type: "success", message: "Anggota berhasil ditambahkan." });
-    } catch (err) {
+      toast("success", `Anggota ${addForm.nama.trim()} berhasil ditambahkan.`);
+    } catch (err: any) {
       console.error(err);
-      setFeedback({ type: "error", message: "Gagal menambah anggota. Coba lagi." });
+      const detail = err?.message || err?.toString() || "Terjadi kesalahan";
+      setFeedback({ type: "error", message: `Gagal menambah anggota: ${detail}` });
+      toast("error", `Gagal menambah anggota: ${detail}`);
     } finally {
       setFormBusy(false);
     }
@@ -294,9 +297,12 @@ export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedCle
       setEditOpen(false);
       setEditingId(null);
       setFeedback({ type: "success", message: "Data anggota berhasil diperbarui." });
-    } catch (err) {
+      toast("success", "Data anggota berhasil diperbarui.");
+    } catch (err: any) {
       console.error(err);
-      setFeedback({ type: "error", message: "Gagal memperbarui data. Coba lagi." });
+      const detail = err?.message || "Terjadi kesalahan";
+      setFeedback({ type: "error", message: `Gagal memperbarui: ${detail}` });
+      toast("error", `Gagal memperbarui: ${detail}`);
     } finally {
       setFormBusy(false);
     }
@@ -312,9 +318,12 @@ export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedCle
       if (selectedAnggota === deleteConfirm.id) setSelectedAnggota(null);
       if (detailAnggota?.id === deleteConfirm.id) setDetailAnggota(null);
       setFeedback({ type: "success", message: `Anggota ${deleteConfirm.nama} berhasil dihapus.` });
-    } catch (err) {
+      toast("success", `Anggota ${deleteConfirm.nama} berhasil dihapus.`);
+    } catch (err: any) {
       console.error(err);
-      setFeedback({ type: "error", message: "Gagal menghapus anggota. Coba lagi." });
+      const detail = err?.message || "Terjadi kesalahan";
+      setFeedback({ type: "error", message: `Gagal menghapus: ${detail}` });
+      toast("error", `Gagal menghapus: ${detail}`);
     } finally {
       setDeleteBusy(false);
     }
