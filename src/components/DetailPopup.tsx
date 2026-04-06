@@ -124,35 +124,40 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
     setSharing(true);
     try {
       const blob = await getBlob();
-      if (!blob) { setSharing(false); return; }
+      if (!blob) return;
 
-      // Give browser time to breathe after any canvas work
       await new Promise((r) => setTimeout(r, 150));
+
+      const shareText = `${title} - PRIMKOPPOL Resor Subang`;
 
       if (typeof navigator.share === "function") {
         const file = new File([blob], `${filename}.jpg`, { type: "image/jpeg" });
-        try {
-          const canFiles = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
-          if (canFiles) {
+        const canFiles = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
+
+        if (canFiles) {
+          try {
             await navigator.share({ title, files: [file] });
-          } else {
-            await navigator.share({ title, text: `${title} - PRIMKOPPOL Resor Subang` });
+            return;
+          } catch (e) {
+            if ((e as Error).name === "AbortError") return;
           }
-          setSharing(false);
+        }
+
+        try {
+          await navigator.share({ title, text: shareText });
           return;
         } catch (e) {
-          if ((e as Error).name === "AbortError") {
-            setSharing(false);
-            return;
-          }
+          if ((e as Error).name === "AbortError") return;
         }
       }
 
-      triggerDownload(blob);
+      await navigator.clipboard.writeText(shareText);
+      alert("Info telah disalin ke clipboard. Silakan paste untuk dibagikan.");
     } catch {
       try {
-        if (cachedBlob.current) triggerDownload(cachedBlob.current);
-      } catch { /* nothing left to try */ }
+        await navigator.clipboard.writeText(`${title} - PRIMKOPPOL Resor Subang`);
+        alert("Info telah disalin ke clipboard.");
+      } catch { /* clipboard also failed */ }
     } finally {
       setSharing(false);
     }
