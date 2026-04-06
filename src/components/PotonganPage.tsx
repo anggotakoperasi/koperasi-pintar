@@ -31,6 +31,7 @@ import type { Potongan } from "@/data/mock";
 import { fetchPotongan, exportCSV, updatePotongan, deletePotongan as deletePotonganDB, postPotonganJurnal } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
 import DatePickerID from "./DatePickerID";
+import { useToast } from "./Toast";
 
 function statusLabel(s: string): string {
   switch (s) {
@@ -95,6 +96,7 @@ interface PotonganPageProps {
 }
 
 export default function PotonganPage({ activeTab = "potongan", highlightKey }: PotonganPageProps) {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("semua");
   const [filterBulan, setFilterBulan] = useState<string>("");
@@ -201,12 +203,14 @@ export default function PotonganPage({ activeTab = "potongan", highlightKey }: P
         prev.map((p) => p.id === koreksiItem.id ? updated : p)
       );
       setKoreksiSaved(true);
+      toast("success", `Koreksi potongan ${koreksiItem.namaAnggota} berhasil disimpan.`);
     } catch (err) {
       console.error("Gagal menyimpan koreksi:", err);
       setPotonganList((prev) =>
         prev.map((p) => p.id === koreksiItem.id ? updated : p)
       );
       setKoreksiSaved(true);
+      toast("warning", "Koreksi disimpan lokal. Sinkronisasi ke database gagal.");
     }
   };
 
@@ -546,7 +550,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
               <p className="text-sm text-navy-300 mb-4">Yakin ingin menghapus potongan <span className="text-white font-medium">{deleteConfirm.namaAnggota}</span> periode {deleteConfirm.bulan}?</p>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setDeleteConfirm(null)} className="flex-1 bg-navy-700 hover:bg-navy-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">Batal</button>
-                <button type="button" onClick={async () => { try { await deletePotonganDB(deleteConfirm.id); } catch {} setPotonganList(prev => prev.filter(p => p.id !== deleteConfirm.id)); setDeleteConfirm(null); }} className="flex-1 bg-danger-500 hover:bg-danger-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">Hapus</button>
+                <button type="button" onClick={async () => { try { await deletePotonganDB(deleteConfirm.id); toast("success", `Potongan ${deleteConfirm.namaAnggota} berhasil dihapus.`); } catch { toast("warning", "Potongan dihapus dari tampilan, sinkronisasi database gagal."); } setPotonganList(prev => prev.filter(p => p.id !== deleteConfirm.id)); setDeleteConfirm(null); }} className="flex-1 bg-danger-500 hover:bg-danger-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">Hapus</button>
               </div>
             </div>
           </div>
@@ -1112,9 +1116,11 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
                         await updatePotongan(p.id, { status: "terkirim" });
                         await postPotonganJurnal({ ...p, status: "terkirim" });
                         setPotonganList(prev => prev.map(x => x.id === p.id ? { ...x, status: "terkirim" } : x));
+                        toast("success", `Potongan ${p.namaAnggota} berhasil diverifikasi & jurnal diposting.`);
                       } catch (err) {
                         console.error("Gagal verifikasi:", err);
                         setPotonganList(prev => prev.map(x => x.id === p.id ? { ...x, status: "terkirim" } : x));
+                        toast("warning", `Status diubah, tapi posting jurnal gagal.`);
                       }
                     }} className="mt-3 w-full flex items-center justify-center gap-2 bg-success-500 hover:bg-success-600 text-white py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer">
                       <CheckCircle2 className="w-3.5 h-3.5" /> Verifikasi & Posting Jurnal

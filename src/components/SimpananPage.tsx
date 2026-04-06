@@ -24,6 +24,7 @@ import {
 } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
 import DatePickerID from "./DatePickerID";
+import { useToast } from "./Toast";
 
 type ModalJenis = "setoran" | "pengambilan" | null;
 
@@ -46,6 +47,7 @@ const emptyForm = () => ({
 });
 
 export default function SimpananPage({ highlightKey }: { highlightKey?: string | null }) {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filterJenis, setFilterJenis] = useState<string>("semua");
   const [anggotaList, setAnggotaList] = useState<Anggota[]>([]);
@@ -139,11 +141,15 @@ export default function SimpananPage({ highlightKey }: { highlightKey?: string |
         keterangan: form.keterangan.trim(),
       });
       await refreshData();
+      const label = modalJenis === "setoran" ? "Setoran" : "Pengambilan";
+      toast("success", `${label} simpanan ${form.kategori} ${formatRupiah(jumlahNum)} untuk ${selectedAnggota.nama} berhasil.`);
       setModalJenis(null);
       setSubmitError(null);
     } catch (err) {
       console.error(err);
-      setSubmitError(err instanceof Error ? err.message : "Gagal menyimpan transaksi.");
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan transaksi.";
+      setSubmitError(msg);
+      toast("error", msg);
     } finally {
       setSubmitting(false);
     }

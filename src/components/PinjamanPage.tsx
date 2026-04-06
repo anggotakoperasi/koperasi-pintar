@@ -20,6 +20,7 @@ import { formatRupiah, getStatusPinjamanBg } from "@/data/mock";
 import type { Pinjaman, Anggota } from "@/data/mock";
 import { fetchPinjaman, fetchAnggota, insertPinjaman, bayarAngsuran } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
+import { useToast } from "./Toast";
 
 const JENIS_PINJAMAN_DEFAULT = ["Simpan Pinjam", "Kredit Serba Guna", "Bank Mandiri", "Lainnya"];
 
@@ -78,6 +79,7 @@ function hitungAngsuranPerBulan(
 }
 
 export default function PinjamanPage({ highlightKey }: { highlightKey?: string | null }) {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("semua");
   const [pinjamanList, setPinjamanList] = useState<Pinjaman[]>([]);
@@ -194,8 +196,10 @@ export default function PinjamanPage({ highlightKey }: { highlightKey?: string |
       await refreshPinjaman();
       setModalBaruOpen(false);
       resetFormBaru();
+      toast("success", `Pinjaman baru ${formatRupiah(parsedJumlah)} untuk ${anggota.nama} berhasil disimpan.`);
     } catch (err) {
       console.error(err);
+      toast("error", `Gagal menyimpan pinjaman: ${err instanceof Error ? err.message : "Terjadi kesalahan"}`);
     } finally {
       setSubmittingBaru(false);
     }
@@ -212,8 +216,10 @@ export default function PinjamanPage({ highlightKey }: { highlightKey?: string |
       await refreshPinjaman();
       setModalBayarOpen(false);
       resetFormBayar();
+      toast("success", `Angsuran ${formatRupiah(pokok + jasa)} berhasil dibayar.`);
     } catch (err) {
       console.error(err);
+      toast("error", `Gagal membayar angsuran: ${err instanceof Error ? err.message : "Terjadi kesalahan"}`);
     } finally {
       setSubmittingBayar(false);
     }

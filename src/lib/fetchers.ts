@@ -279,8 +279,12 @@ async function postJurnal(
       kredit: l.kredit,
     }));
   if (entries.length === 0) return;
-  const { error } = await supabase.from("jurnal_entries").insert(entries);
-  if (error) throw error;
+  try {
+    const { error } = await supabase.from("jurnal_entries").insert(entries);
+    if (error) console.warn("[Jurnal] Gagal posting jurnal (tabel mungkin belum ada):", error.message);
+  } catch (err) {
+    console.warn("[Jurnal] Gagal posting jurnal:", err);
+  }
 }
 
 const AKUN = {

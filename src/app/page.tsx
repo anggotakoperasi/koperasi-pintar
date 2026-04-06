@@ -14,6 +14,7 @@ import PotonganPage from "@/components/PotonganPage";
 import SHUPage from "@/components/SHUPage";
 import LaporanPage from "@/components/LaporanPage";
 import PengaturanPage from "@/components/PengaturanPage";
+import { ToastProvider } from "@/components/Toast";
 
 const SESSION_KEY = "koperasi_session";
 const MENU_KEY = "koperasi_menu";
@@ -119,6 +120,7 @@ export default function Home() {
   };
 
   return (
+    <ToastProvider>
     <div className="min-h-screen">
       <Sidebar
         activeMenu={activeMenu}
@@ -143,5 +145,6 @@ export default function Home() {
         <div className="p-4 lg:p-6">{renderPage()}</div>
       </main>
     </div>
+    </ToastProvider>
   );
 }

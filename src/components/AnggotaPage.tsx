@@ -25,6 +25,7 @@ import { formatRupiah, getTierColor, getTierLabel } from "@/data/mock";
 import type { Anggota } from "@/data/mock";
 import { fetchAnggota, insertAnggota, updateAnggota, deleteAnggota, getMaxNomorAnggota } from "@/lib/fetchers";
 import DatePickerID from "./DatePickerID";
+import { useToast } from "./Toast";
 
 const PANGKAT_OPTIONS: string[] = [
   "AKBP",
@@ -90,6 +91,7 @@ interface AnggotaPageProps {
 }
 
 export default function AnggotaPage({ globalSelectedAnggota, onGlobalSelectedClear, highlightKey }: AnggotaPageProps = {}) {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filterTier, setFilterTier] = useState<string>("semua");
   const [selectedAnggota, setSelectedAnggota] = useState<string | null>(null);
