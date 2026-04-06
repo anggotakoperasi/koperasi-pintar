@@ -47,12 +47,7 @@ interface Operator { id: number; nama: string; username: string; role: string; a
 
 const ROLE_OPTIONS = ["Super Admin", "Admin Operasional", "Bendahara", "Manajer Unit", "Viewer"];
 
-const DEFAULT_OPERATORS: Operator[] = [
-  { id: 1, nama: "IPTU (PURN) POL HARDOYO", username: "admin", role: "Super Admin", aktif: true },
-  { id: 2, nama: "BRIPKA DEWI ASTUTI", username: "operator", role: "Admin Operasional", aktif: true },
-  { id: 3, nama: "IPTU SLAMET RIYADI", username: "bendahara", role: "Bendahara", aktif: true },
-  { id: 4, nama: "AIPDA RINA MARLINA", username: "manajer", role: "Manajer Unit", aktif: true },
-];
+const DEFAULT_OPERATORS: Operator[] = [];
 
 const DEFAULTS = {
   namaKoperasi: "Primkoppol Resor Subang",

