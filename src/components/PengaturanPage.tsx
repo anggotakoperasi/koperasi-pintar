@@ -23,7 +23,12 @@ import {
   Download,
   FileCheck,
 } from "lucide-react";
-import { fetchAnggota, fetchTransaksiSimpanan, fetchPinjaman, fetchPotongan, fetchCOA, fetchJurnalEntriesWithAkun } from "@/lib/fetchers";
+import {
+  fetchAnggota, fetchTransaksiSimpanan, fetchPinjaman, fetchPotongan, fetchCOA, fetchJurnalEntriesWithAkun,
+  fetchOperators, insertOperator, updateOperator, deleteOperator as deleteOperatorDB,
+  fetchAppSettings, upsertAppSettings,
+  type DBOperator,
+} from "@/lib/fetchers";
 import { supabase } from "@/lib/supabase";
 
 const SETTINGS_KEY = "koperasi_pengaturan";
@@ -47,15 +52,12 @@ interface Operator { id: number; nama: string; username: string; password?: stri
 
 const ROLE_OPTIONS = ["Super Admin", "Admin Operasional", "Bendahara", "Manajer Unit", "Viewer"];
 
-const DEFAULT_OPERATORS: Operator[] = [];
-
 const DEFAULTS = {
   namaKoperasi: "Primkoppol Resor Subang",
   alamat: "Jl. Otista No.52, Subang",
   ketua: "IPTU (PURN) POL HARDOYO",
   badanHukum: "No. 6513/BHPAD/KWK.10/II/2003 tertanggal 20 Februari 2003",
   periode: "2025 - 2028",
-  operators: DEFAULT_OPERATORS,
   kodePinjaman: [
     { kode: "SP", nama: "Simpan Pinjam", bunga: "1.0" },
     { kode: "KSG", nama: "Kredit Serba Guna", bunga: "1.5" },
@@ -69,36 +71,32 @@ const DEFAULTS = {
   ] as KodeSimpanan[],
 };
 
-function loadSettings() {
-  if (typeof window === "undefined") return DEFAULTS;
+function syncToLocalStorage(s: { namaKoperasi: string; alamat: string }) {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return DEFAULTS;
-    const parsed = JSON.parse(raw);
-    return { ...DEFAULTS, ...parsed };
-  } catch {
-    return DEFAULTS;
-  }
+    const current = raw ? JSON.parse(raw) : {};
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...current, namaKoperasi: s.namaKoperasi, alamat: s.alamat }));
+  } catch { /* ignore */ }
 }
 
 export default function PengaturanPage({ highlightKey }: { highlightKey?: string | null } = {}) {
   const [activeModal, setActiveModal] = useState<ModalId>(null);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [dbLoaded, setDbLoaded] = useState(false);
 
-  const stored = loadSettings();
-  const [namaKoperasi, setNamaKoperasi] = useState(stored.namaKoperasi);
-  const [alamat, setAlamat] = useState(stored.alamat);
-  const [ketua, setKetua] = useState(stored.ketua);
-  const [badanHukum, setBadanHukum] = useState(stored.badanHukum);
-  const [periode, setPeriode] = useState(stored.periode);
+  const [namaKoperasi, setNamaKoperasi] = useState(DEFAULTS.namaKoperasi);
+  const [alamat, setAlamat] = useState(DEFAULTS.alamat);
+  const [ketua, setKetua] = useState(DEFAULTS.ketua);
+  const [badanHukum, setBadanHukum] = useState(DEFAULTS.badanHukum);
+  const [periode, setPeriode] = useState(DEFAULTS.periode);
 
-  const [operators, setOperators] = useState<Operator[]>(stored.operators || DEFAULT_OPERATORS);
+  const [operators, setOperators] = useState<Operator[]>([]);
   const [editingOp, setEditingOp] = useState<Operator | null>(null);
   const [superAdminWarning, setSuperAdminWarning] = useState(false);
 
-  const [kodePinjaman, setKodePinjaman] = useState<KodePinjaman[]>(stored.kodePinjaman);
-  const [kodeSimpanan, setKodeSimpanan] = useState<KodeSimpanan[]>(stored.kodeSimpanan);
+  const [kodePinjaman, setKodePinjaman] = useState<KodePinjaman[]>(DEFAULTS.kodePinjaman);
+  const [kodeSimpanan, setKodeSimpanan] = useState<KodeSimpanan[]>(DEFAULTS.kodeSimpanan);
 
   const [lastBackup, setLastBackup] = useState<string | null>(null);
   const [backupBusy, setBackupBusy] = useState(false);
@@ -119,24 +117,39 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
       setLastBackup(localStorage.getItem("koperasi_last_backup"));
       setLastReindex(localStorage.getItem("koperasi_last_reindex"));
     }
+    (async () => {
+      try {
+        const [settings, ops] = await Promise.all([fetchAppSettings(), fetchOperators()]);
+        setNamaKoperasi(settings.namaKoperasi);
+        setAlamat(settings.alamat);
+        setKetua(settings.ketua);
+        setBadanHukum(settings.badanHukum);
+        setPeriode(settings.periode);
+        setKodePinjaman(settings.kodePinjaman.length ? settings.kodePinjaman : DEFAULTS.kodePinjaman);
+        setKodeSimpanan(settings.kodeSimpanan.length ? settings.kodeSimpanan : DEFAULTS.kodeSimpanan);
+        setOperators(ops.map(o => ({ ...o, password: o.password })));
+        syncToLocalStorage({ namaKoperasi: settings.namaKoperasi, alamat: settings.alamat });
+      } catch (err) {
+        console.warn("[Pengaturan] Gagal load dari Supabase, pakai default:", err);
+      } finally {
+        setDbLoaded(true);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const persistSettings = useCallback(() => {
-    const data = { namaKoperasi, alamat, ketua, badanHukum, periode, operators, kodePinjaman, kodeSimpanan };
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
-  }, [namaKoperasi, alamat, ketua, badanHukum, periode, operators, kodePinjaman, kodeSimpanan]);
-
-  useEffect(() => {
-    persistSettings();
-  }, [persistSettings]);
-
-  const saveWithPersist = (msg: string) => {
+  const showSuccess = (msg: string) => {
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
       setSuccessMsg(msg);
       setTimeout(() => setSuccessMsg(null), 2500);
-    }, 600);
+    }, 400);
+  };
+
+  const saveSettingsToDB = async () => {
+    await upsertAppSettings({ namaKoperasi, alamat, ketua, badanHukum, periode, kodePinjaman, kodeSimpanan });
+    syncToLocalStorage({ namaKoperasi, alamat });
   };
 
   const closeModal = useCallback(() => {
@@ -374,7 +387,7 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                   <label className="block text-xs font-medium text-navy-400 uppercase tracking-wide mb-1.5">Periode Kepengurusan</label>
                   <input value={periode} onChange={(e) => setPeriode(e.target.value)} className={inputCls} />
                 </div>
-                <button type="button" disabled={saving} onClick={() => saveWithPersist("Setup program berhasil disimpan!")} className={btnPrimary}>
+                <button type="button" disabled={saving} onClick={async () => { try { await saveSettingsToDB(); showSuccess("Setup program berhasil disimpan!"); } catch { showSuccess("Gagal simpan ke database."); } }} className={btnPrimary}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
                 </button>
               </>
@@ -434,27 +447,38 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                       <button
                         type="button"
                         disabled={!editingOp.nama.trim() || !editingOp.username.trim() || !(editingOp.password && editingOp.password.length >= 6)}
-                        onClick={() => {
+                        onClick={async () => {
                           if (editingOp.role === "Super Admin" && !superAdminWarning) {
                             setSuperAdminWarning(true);
                             return;
                           }
-                          const exists = operators.some((o) => o.id === editingOp.id);
-                          const updatedOps = exists
-                            ? operators.map((o) => o.id === editingOp.id ? editingOp : o)
-                            : [...operators, editingOp];
-                          setOperators(updatedOps);
-
                           try {
-                            const raw = localStorage.getItem(SETTINGS_KEY);
-                            const current = raw ? JSON.parse(raw) : {};
-                            current.operators = updatedOps;
-                            localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...DEFAULTS, ...current }));
-                          } catch { /* ignore */ }
-
-                          setSuperAdminWarning(false);
-                          setEditingOp(null);
-                          saveWithPersist(exists ? "Data operator berhasil diperbarui!" : "Operator baru berhasil ditambahkan!");
+                            const exists = operators.some((o) => o.id === editingOp.id);
+                            if (exists) {
+                              await updateOperator(editingOp.id, {
+                                nama: editingOp.nama,
+                                username: editingOp.username,
+                                password: editingOp.password || "",
+                                role: editingOp.role,
+                                aktif: editingOp.aktif,
+                              });
+                              setOperators(prev => prev.map(o => o.id === editingOp.id ? editingOp : o));
+                            } else {
+                              const newId = await insertOperator({
+                                nama: editingOp.nama,
+                                username: editingOp.username,
+                                password: editingOp.password || "",
+                                role: editingOp.role,
+                                aktif: editingOp.aktif,
+                              });
+                              setOperators(prev => [...prev, { ...editingOp, id: newId }]);
+                            }
+                            setSuperAdminWarning(false);
+                            setEditingOp(null);
+                            showSuccess(exists ? "Data operator berhasil diperbarui!" : "Operator baru berhasil ditambahkan!");
+                          } catch (err: any) {
+                            showSuccess(`Gagal: ${err?.message || "Error"}`);
+                          }
                         }}
                         className={btnPrimary + " flex-1 cursor-pointer"}
                       >
@@ -506,17 +530,15 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => {
+                                    onClick={async () => {
                                       if (confirm(`Hapus operator ${op.nama}?`)) {
-                                        const updatedOps = operators.filter((o) => o.id !== op.id);
-                                        setOperators(updatedOps);
                                         try {
-                                          const raw = localStorage.getItem(SETTINGS_KEY);
-                                          const current = raw ? JSON.parse(raw) : {};
-                                          current.operators = updatedOps;
-                                          localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...DEFAULTS, ...current }));
-                                        } catch { /* ignore */ }
-                                        saveWithPersist("Operator berhasil dihapus.");
+                                          await deleteOperatorDB(op.id);
+                                          setOperators(prev => prev.filter(o => o.id !== op.id));
+                                          showSuccess("Operator berhasil dihapus.");
+                                        } catch (err: any) {
+                                          showSuccess(`Gagal hapus: ${err?.message || "Error"}`);
+                                        }
                                       }
                                     }}
                                     className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-danger-600/15 text-danger-400 hover:bg-danger-600/25 transition-colors cursor-pointer"
@@ -535,8 +557,7 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                       <button
                         type="button"
                         onClick={() => {
-                          const newId = operators.length > 0 ? Math.max(...operators.map(o => o.id)) + 1 : 1;
-                          setEditingOp({ id: newId, nama: "", username: "", password: "", role: "Admin Operasional", aktif: true });
+                          setEditingOp({ id: -Date.now(), nama: "", username: "", password: "", role: "Admin Operasional", aktif: true });
                           setSuperAdminWarning(false);
                         }}
                         className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer"
@@ -576,7 +597,7 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                   <button type="button" onClick={() => setKodePinjaman([...kodePinjaman, { kode: "", nama: "", bunga: "1.0" }])} className="flex items-center gap-2 bg-navy-700 hover:bg-navy-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
                     <Plus className="w-4 h-4" /> Tambah Baris
                   </button>
-                  <button type="button" disabled={saving} onClick={() => saveWithPersist("Kode pinjaman berhasil disimpan!")} className={btnPrimary}>
+                  <button type="button" disabled={saving} onClick={async () => { try { await saveSettingsToDB(); showSuccess("Kode pinjaman berhasil disimpan!"); } catch { showSuccess("Gagal simpan."); } }} className={btnPrimary}>
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
                   </button>
                 </div>
@@ -600,7 +621,7 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
                     </div>
                   </div>
                 ))}
-                <button type="button" disabled={saving} onClick={() => saveWithPersist("Kode simpanan berhasil disimpan!")} className={btnPrimary}>
+                <button type="button" disabled={saving} onClick={async () => { try { await saveSettingsToDB(); showSuccess("Kode simpanan berhasil disimpan!"); } catch { showSuccess("Gagal simpan."); } }} className={btnPrimary}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
                 </button>
               </>

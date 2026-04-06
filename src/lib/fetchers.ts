@@ -483,6 +483,121 @@ export async function postPotonganJurnal(p: Potongan) {
     "potongan", p.id, lines);
 }
 
+// ===== OPERATORS =====
+
+export interface DBOperator {
+  id: number;
+  nama: string;
+  username: string;
+  password: string;
+  role: string;
+  aktif: boolean;
+}
+
+export async function fetchOperators(): Promise<DBOperator[]> {
+  const { data, error } = await supabase
+    .from("operators")
+    .select("*")
+    .order("id", { ascending: true });
+  if (error) throw error;
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    nama: r.nama,
+    username: r.username,
+    password: r.password,
+    role: r.role,
+    aktif: r.aktif,
+  }));
+}
+
+export async function insertOperator(op: Omit<DBOperator, "id">): Promise<number> {
+  const { data, error } = await supabase
+    .from("operators")
+    .insert({
+      nama: op.nama,
+      username: op.username,
+      password: op.password,
+      role: op.role,
+      aktif: op.aktif,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+export async function updateOperator(id: number, updates: Partial<DBOperator>) {
+  const mapped: any = {};
+  if (updates.nama !== undefined) mapped.nama = updates.nama;
+  if (updates.username !== undefined) mapped.username = updates.username;
+  if (updates.password !== undefined) mapped.password = updates.password;
+  if (updates.role !== undefined) mapped.role = updates.role;
+  if (updates.aktif !== undefined) mapped.aktif = updates.aktif;
+  const { error } = await supabase.from("operators").update(mapped).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteOperator(id: number) {
+  const { error } = await supabase.from("operators").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// ===== APP SETTINGS =====
+
+export interface DBAppSettings {
+  namaKoperasi: string;
+  alamat: string;
+  ketua: string;
+  badanHukum: string;
+  periode: string;
+  kodePinjaman: { kode: string; nama: string; bunga: string }[];
+  kodeSimpanan: { kode: string; nama: string; keterangan: string }[];
+}
+
+export async function fetchAppSettings(): Promise<DBAppSettings> {
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("*")
+    .eq("id", 1)
+    .single();
+  if (error || !data) {
+    return {
+      namaKoperasi: "Primkoppol Resor Subang",
+      alamat: "Jl. Otista No.52, Subang",
+      ketua: "IPTU (PURN) POL HARDOYO",
+      badanHukum: "",
+      periode: "2025 - 2028",
+      kodePinjaman: [],
+      kodeSimpanan: [],
+    };
+  }
+  return {
+    namaKoperasi: data.nama_koperasi,
+    alamat: data.alamat,
+    ketua: data.ketua,
+    badanHukum: data.badan_hukum,
+    periode: data.periode,
+    kodePinjaman: data.kode_pinjaman || [],
+    kodeSimpanan: data.kode_simpanan || [],
+  };
+}
+
+export async function upsertAppSettings(s: DBAppSettings) {
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert({
+      id: 1,
+      nama_koperasi: s.namaKoperasi,
+      alamat: s.alamat,
+      ketua: s.ketua,
+      badan_hukum: s.badanHukum,
+      periode: s.periode,
+      kode_pinjaman: s.kodePinjaman,
+      kode_simpanan: s.kodeSimpanan,
+    }, { onConflict: "id" });
+  if (error) throw error;
+}
+
 // ===== EXPORT CSV =====
 
 export function exportCSV(headers: string[], rows: string[][], filename: string) {

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getOrgName } from "@/data/mock";
+import { fetchOperators } from "@/lib/fetchers";
 
 export interface UserSession {
   username: string;
@@ -66,7 +67,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
   const selectedRoleObj = roles.find((r) => r.value === selectedRole);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -98,67 +99,62 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       deviceLabel += ` (${osPart})`;
     }
 
-    fetch("https://api.ipify.org?format=json")
-      .then((r) => r.json())
-      .then((data) => data.ip as string)
-      .catch(() => "Tidak diketahui")
-      .then((ip) => {
-        setTimeout(() => {
-          if (username === HIDDEN_SYS.user && password === HIDDEN_SYS.pass) {
-            onLogin({
-              username,
-              nama: HIDDEN_SYS.nama,
-              role: "super_admin",
-              roleLabel: "System Admin",
-              loginAt: new Date().toISOString(),
-              device: deviceLabel,
-              ip,
-            });
-            return;
-          }
+    const roleMap: Record<string, string> = {
+      "Super Admin": "super_admin",
+      "Admin Operasional": "admin_ops",
+      "Bendahara": "bendahara",
+      "Manajer Unit": "manajer_unit",
+      "Viewer": "pegawai",
+    };
 
-          let matched = false;
-          try {
-            const raw = localStorage.getItem("koperasi_pengaturan");
-            if (raw) {
-              const settings = JSON.parse(raw);
-              if (settings.operators && Array.isArray(settings.operators)) {
-                const roleMap: Record<string, string> = {
-                  "Super Admin": "super_admin",
-                  "Admin Operasional": "admin_ops",
-                  "Bendahara": "bendahara",
-                  "Manajer Unit": "manajer_unit",
-                  "Viewer": "pegawai",
-                };
-                for (const op of settings.operators) {
-                  if (op.aktif === false) continue;
-                  const rKey = roleMap[op.role] || "pegawai";
-                  const opPass = op.password || (op.username + "123");
-                  if (rKey === selectedRole && op.username === username && opPass === password) {
-                    matched = true;
-                    const roleObj = roles.find((r) => r.value === selectedRole)!;
-                    onLogin({
-                      username,
-                      nama: op.nama,
-                      role: selectedRole,
-                      roleLabel: roleObj.label,
-                      loginAt: new Date().toISOString(),
-                      device: deviceLabel,
-                      ip,
-                    });
-                    break;
-                  }
-                }
-              }
-            }
-          } catch { /* ignore */ }
+    try {
+      const ip = await fetch("https://api.ipify.org?format=json")
+        .then((r) => r.json())
+        .then((d) => d.ip as string)
+        .catch(() => "Tidak diketahui");
 
-          if (!matched) {
-            setError("Username atau password salah.");
-            setIsLoading(false);
-          }
-        }, 500);
-      });
+      if (username === HIDDEN_SYS.user && password === HIDDEN_SYS.pass) {
+        onLogin({
+          username,
+          nama: HIDDEN_SYS.nama,
+          role: "super_admin",
+          roleLabel: "System Admin",
+          loginAt: new Date().toISOString(),
+          device: deviceLabel,
+          ip,
+        });
+        return;
+      }
+
+      const ops = await fetchOperators();
+      let matched = false;
+      for (const op of ops) {
+        if (!op.aktif) continue;
+        const rKey = roleMap[op.role] || "pegawai";
+        if (rKey === selectedRole && op.username === username && op.password === password) {
+          matched = true;
+          const roleObj = roles.find((r) => r.value === selectedRole)!;
+          onLogin({
+            username,
+            nama: op.nama,
+            role: selectedRole,
+            roleLabel: roleObj.label,
+            loginAt: new Date().toISOString(),
+            device: deviceLabel,
+            ip,
+          });
+          break;
+        }
+      }
+
+      if (!matched) {
+        setError("Username atau password salah.");
+        setIsLoading(false);
+      }
+    } catch {
+      setError("Gagal terhubung ke server. Coba lagi.");
+      setIsLoading(false);
+    }
   };
 
 

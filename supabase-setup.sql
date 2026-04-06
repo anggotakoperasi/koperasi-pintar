@@ -178,6 +178,64 @@ CREATE POLICY "Allow public update anggota" ON anggota FOR UPDATE USING (true) W
 CREATE POLICY "Allow public update pinjaman" ON pinjaman FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public update potongan" ON potongan FOR UPDATE USING (true) WITH CHECK (true);
 
+-- 8. TABEL OPERATORS
+CREATE TABLE IF NOT EXISTS operators (
+  id SERIAL PRIMARY KEY,
+  nama TEXT NOT NULL,
+  username TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'Admin Operasional',
+  aktif BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE operators ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read operators" ON operators FOR SELECT USING (true);
+CREATE POLICY "Allow public insert operators" ON operators FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update operators" ON operators FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public delete operators" ON operators FOR DELETE USING (true);
+
+CREATE TRIGGER tr_operators_updated_at
+  BEFORE UPDATE ON operators
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- 9. TABEL APP SETTINGS (single row)
+CREATE TABLE IF NOT EXISTS app_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  nama_koperasi TEXT NOT NULL DEFAULT 'Primkoppol Resor Subang',
+  alamat TEXT NOT NULL DEFAULT 'Jl. Otista No.52, Subang',
+  ketua TEXT NOT NULL DEFAULT 'IPTU (PURN) POL HARDOYO',
+  badan_hukum TEXT NOT NULL DEFAULT '',
+  periode TEXT NOT NULL DEFAULT '2025 - 2028',
+  kode_pinjaman JSONB NOT NULL DEFAULT '[]',
+  kode_simpanan JSONB NOT NULL DEFAULT '[]',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read app_settings" ON app_settings FOR SELECT USING (true);
+CREATE POLICY "Allow public insert app_settings" ON app_settings FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update app_settings" ON app_settings FOR UPDATE USING (true) WITH CHECK (true);
+
+CREATE TRIGGER tr_app_settings_updated_at
+  BEFORE UPDATE ON app_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Seed default settings row
+INSERT INTO app_settings (id, nama_koperasi, alamat, ketua, badan_hukum, periode, kode_pinjaman, kode_simpanan)
+VALUES (
+  1,
+  'Primkoppol Resor Subang',
+  'Jl. Otista No.52, Subang',
+  'IPTU (PURN) POL HARDOYO',
+  'No. 6513/BHPAD/KWK.10/II/2003 tertanggal 20 Februari 2003',
+  '2025 - 2028',
+  '[{"kode":"SP","nama":"Simpan Pinjam","bunga":"1.0"},{"kode":"KSG","nama":"Kredit Serba Guna","bunga":"1.5"},{"kode":"BM","nama":"Bank Mandiri","bunga":"0.8"},{"kode":"LN","nama":"Lainnya","bunga":"1.0"}]',
+  '[{"kode":"PKK","nama":"Simpanan Pokok","keterangan":"Setoran awal saat mendaftar"},{"kode":"WJB","nama":"Simpanan Wajib","keterangan":"Setoran bulanan wajib"},{"kode":"SKR","nama":"Simpanan Sukarela","keterangan":"Setoran sukarela kapan saja"}]'
+)
+ON CONFLICT (id) DO NOTHING;
+
 -- ============================================
 -- SEED DATA
 -- ============================================
