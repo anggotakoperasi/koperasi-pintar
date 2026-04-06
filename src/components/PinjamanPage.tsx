@@ -16,7 +16,7 @@ import {
   Eye,
 } from "lucide-react";
 import StatCard from "./StatCard";
-import { formatRupiah, getStatusPinjamanBg } from "@/data/mock";
+import { formatRupiah, getStatusPinjamanBg, getOrgName } from "@/data/mock";
 import type { Pinjaman, Anggota } from "@/data/mock";
 import { fetchPinjaman, fetchAnggota, insertPinjaman, bayarAngsuran } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
@@ -554,7 +554,7 @@ export default function PinjamanPage({ highlightKey }: { highlightKey?: string |
         {detailItem && (
           <>
             <h3 className="text-base font-bold text-white text-center mb-1">RINCIAN PINJAMAN</h3>
-            <p className="text-xs text-navy-400 text-center mb-4">PRIMKOPPOL RESOR SUBANG</p>
+            <p className="text-xs text-navy-400 text-center mb-4">{getOrgName()}</p>
             <div className="border-t border-navy-700/50 pt-3 space-y-2">
               <div className="flex justify-between"><span className="text-navy-400">Nama Anggota</span><span className="font-medium">{detailItem.namaAnggota}</span></div>
               <div className="flex justify-between"><span className="text-navy-400">Jenis Pinjaman</span><span>{detailItem.jenisPinjaman}</span></div>

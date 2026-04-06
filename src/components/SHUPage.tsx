@@ -22,7 +22,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import StatCard from "./StatCard";
-import { formatRupiah, getTierColor, getTierLabel } from "@/data/mock";
+import { formatRupiah, getTierColor, getTierLabel, getOrgName } from "@/data/mock";
 import type { Anggota } from "@/data/mock";
 import { fetchAnggota } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
@@ -96,7 +96,7 @@ export default function SHUPage() {
         {detailItem && (
           <>
             <h3 className="text-base font-bold text-white text-center mb-1">RINCIAN ESTIMASI SHU</h3>
-            <p className="text-xs text-navy-400 text-center mb-4">PRIMKOPPOL RESOR SUBANG</p>
+            <p className="text-xs text-navy-400 text-center mb-4">{getOrgName()}</p>
             <div className="border-t border-navy-700/50 pt-3 space-y-2">
               <div className="flex justify-between"><span className="text-navy-400">Nama Anggota</span><span className="font-medium">{detailItem.nama}</span></div>
               <div className="flex justify-between"><span className="text-navy-400">No. Anggota</span><span>{detailItem.nomorAnggota}</span></div>

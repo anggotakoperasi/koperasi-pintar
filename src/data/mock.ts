@@ -131,3 +131,27 @@ export function getStatusPinjamanBg(status: string): string {
     default: return "bg-navy-700 text-navy-200";
   }
 }
+
+export function getOrgName(): string {
+  if (typeof window === "undefined") return "PRIMKOPPOL RESOR SUBANG";
+  try {
+    const raw = localStorage.getItem("koperasi_pengaturan");
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p.namaKoperasi) return p.namaKoperasi.toUpperCase();
+    }
+  } catch { /* ignore */ }
+  return "PRIMKOPPOL RESOR SUBANG";
+}
+
+export function getOrgAddress(): string {
+  if (typeof window === "undefined") return "Jl. Otista No.52, Subang";
+  try {
+    const raw = localStorage.getItem("koperasi_pengaturan");
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p.alamat) return p.alamat;
+    }
+  } catch { /* ignore */ }
+  return "Jl. Otista No.52, Subang";
+}

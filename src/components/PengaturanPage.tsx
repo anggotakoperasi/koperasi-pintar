@@ -114,10 +114,15 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
   const [restoreData, setRestoreData] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [reindexBusy, setReindexBusy] = useState(false);
+  const [reindexError, setReindexError] = useState<string | null>(null);
+  const [reindexStats, setReindexStats] = useState<Record<string, number> | null>(null);
+  const [lastReindex, setLastReindex] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setLastBackup(localStorage.getItem("koperasi_last_backup"));
+      setLastReindex(localStorage.getItem("koperasi_last_reindex"));
     }
   }, []);
 
@@ -144,6 +149,8 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
     setRestorePreview(null);
     setRestoreFile(null);
     setRestoreData(null);
+    setReindexError(null);
+    setReindexStats(null);
   }, []);
 
   const handleBackup = async () => {
@@ -268,6 +275,29 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
       setRestoreError(`Gagal restore: ${(err as Error).message}`);
     } finally {
       setRestoreBusy(false);
+    }
+  };
+
+  const handleReindex = async () => {
+    setReindexBusy(true);
+    setReindexError(null);
+    try {
+      const tables = ["anggota", "transaksi_simpanan", "pinjaman", "potongan", "coa", "jurnal_entries"];
+      const stats: Record<string, number> = {};
+      for (const t of tables) {
+        const { count, error } = await supabase.from(t).select("*", { count: "exact", head: true });
+        if (error) throw new Error(`Tabel ${t}: ${error.message}`);
+        stats[t] = count ?? 0;
+      }
+      setReindexStats(stats);
+      const now = new Date().toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      localStorage.setItem("koperasi_last_reindex", now);
+      setLastReindex(now);
+      setSuccessMsg("Reindex berhasil! Semua tabel telah diverifikasi.");
+    } catch (err) {
+      setReindexError(`Gagal reindex: ${(err as Error).message}`);
+    } finally {
+      setReindexBusy(false);
     }
   };
 
@@ -596,13 +626,31 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
             )}
             {activeModal === "reindex" && (
               <>
-                <p className="text-sm text-navy-300">Reindex akan memperbaiki index database untuk meningkatkan performa query dan akses data.</p>
+                <p className="text-sm text-navy-300">Reindex akan memverifikasi seluruh tabel database dan menampilkan statistik jumlah data per tabel.</p>
                 <div className="bg-navy-800/50 rounded-xl p-4 space-y-2">
-                  <div className="flex justify-between text-sm"><span className="text-navy-400">Tabel</span><span className="text-white">anggota, transaksi_simpanan, pinjaman, potongan</span></div>
-                  <div className="flex justify-between text-sm"><span className="text-navy-400">Terakhir Reindex</span><span className="text-white">Belum pernah</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-navy-400">Tabel</span><span className="text-white">anggota, transaksi_simpanan, pinjaman, potongan, coa, jurnal_entries</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-navy-400">Terakhir Reindex</span><span className="text-white">{lastReindex || "Belum pernah"}</span></div>
                 </div>
-                <button type="button" disabled={saving} onClick={() => saveWithPersist("Reindex berhasil! Database telah dioptimalkan.")} className={btnPrimary}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Mulai Reindex
+                {reindexError && (
+                  <div className="flex items-center gap-2 bg-danger-600/15 border border-danger-600/30 rounded-xl px-4 py-3 text-sm text-danger-400">
+                    <AlertTriangle className="w-4 h-4 shrink-0" /> {reindexError}
+                  </div>
+                )}
+                {reindexStats && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-white">Statistik Tabel:</p>
+                    <div className="bg-navy-800/50 rounded-xl p-4 space-y-2">
+                      {Object.entries(reindexStats).map(([table, count]) => (
+                        <div key={table} className="flex justify-between text-sm">
+                          <span className="text-navy-400">{table}</span>
+                          <span className="text-white font-medium">{count} baris</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button type="button" disabled={reindexBusy} onClick={handleReindex} className={btnPrimary}>
+                  {reindexBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Mulai Reindex
                 </button>
               </>
             )}
@@ -707,7 +755,7 @@ export default function PengaturanPage({ highlightKey }: { highlightKey?: string
           </div>
           <div className="bg-navy-800/50 rounded-xl p-3">
             <p className="text-xs text-navy-400">Operator Aktif</p>
-            <p className="text-sm font-medium text-white mt-1">Admin (Super Admin)</p>
+            <p className="text-sm font-medium text-white mt-1">{operators.filter(o => o.aktif).length} operator ({operators.find(o => o.role === "Super Admin")?.nama?.split(" ").pop() || "Admin"})</p>
           </div>
         </div>
       </div>

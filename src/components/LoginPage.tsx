@@ -16,6 +16,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { getOrgName } from "@/data/mock";
 
 export interface UserSession {
   username: string;
@@ -157,7 +158,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <Image src="/logo.png" alt="Logo PRIMKOPPOL" width={96} height={96} className="w-full h-full object-cover" priority />
           </div>
           <h1 className="text-3xl font-bold text-white mb-1">Koperasi Pintar</h1>
-          <p className="text-navy-200 text-base">PRIMKOPPOL Resor Subang</p>
+          <p className="text-navy-200 text-base">{getOrgName()}</p>
           <p className="text-navy-300 text-sm mt-1">Sistem Simpan Pinjam Koperasi Terpadu</p>
         </div>
 
@@ -301,7 +302,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
         {/* Footer */}
         <p className="text-center text-xs text-navy-400 mt-6">
-          Koperasi Pintar v1.0 &middot; PRIMKOPPOL Resor Subang
+          Koperasi Pintar v1.0 &middot; {getOrgName()}
         </p>
       </div>
     </div>

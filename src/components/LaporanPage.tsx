@@ -22,7 +22,7 @@ import {
   ChevronDown,
   Search,
 } from "lucide-react";
-import { formatRupiah } from "@/data/mock";
+import { formatRupiah, getOrgName } from "@/data/mock";
 import type { Anggota, TransaksiSimpanan, Pinjaman, Potongan, JurnalEntry, COA } from "@/data/mock";
 import {
   fetchAnggota,
@@ -1097,7 +1097,7 @@ export default function LaporanPage() {
         .summary span { font-weight: 600; }
         @media print { body { padding: 0; } }
       </style></head><body>
-      <p class="org">PRIMKOPPOL RESOR SUBANG</p>
+      <p class="org">${getOrgName()}</p>
       <h1>${report?.title || ""}</h1>
       <h2>${report?.subtitle || ""} — Dicetak: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</h2>
       <table>
@@ -1238,7 +1238,7 @@ export default function LaporanPage() {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 border-b border-navy-700/50">
               <div>
-                <p className="text-xs text-accent-400 font-medium uppercase tracking-wider">PRIMKOPPOL RESOR SUBANG</p>
+                <p className="text-xs text-accent-400 font-medium uppercase tracking-wider">{getOrgName()}</p>
                 <h3 className="text-lg font-bold text-white">{report.title}</h3>
                 <p className="text-sm text-navy-400">{report.subtitle}</p>
               </div>

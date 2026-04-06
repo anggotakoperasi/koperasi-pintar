@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Receipt,
   Search,
@@ -26,9 +26,9 @@ import {
   Filter,
 } from "lucide-react";
 import StatCard from "./StatCard";
-import { formatRupiah } from "@/data/mock";
+import { formatRupiah, getOrgName } from "@/data/mock";
 import type { Potongan } from "@/data/mock";
-import { fetchPotongan, exportCSV, updatePotongan, deletePotongan as deletePotonganDB, postPotonganJurnal } from "@/lib/fetchers";
+import { fetchPotongan, exportCSV, updatePotongan, deletePotongan as deletePotonganDB, postPotonganJurnal, insertPotongan } from "@/lib/fetchers";
 import DetailPopup from "./DetailPopup";
 import DatePickerID from "./DatePickerID";
 import { useToast } from "./Toast";
@@ -138,6 +138,10 @@ export default function PotonganPage({ activeTab = "potongan", highlightKey }: P
 
   // Gagal upload states
   const [gagalUploadPopup, setGagalUploadPopup] = useState(false);
+  const [uploadPreview, setUploadPreview] = useState<Potongan[] | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const uploadFileRef = useRef<HTMLInputElement>(null);
 
   // Rekap states
   const [rekapSearch, setRekapSearch] = useState("");
@@ -292,7 +296,7 @@ export default function PotonganPage({ activeTab = "potongan", highlightKey }: P
   .summary span { font-weight: 600; }
   @media print { body { padding: 0; } }
 </style></head><body>
-<p class="org">PRIMKOPPOL RESOR SUBANG</p>
+<p class="org">${getOrgName()}</p>
 <h1>DAFTAR POTONGAN GAJI ANGGOTA</h1>
 <h2>Periode: ${periodeLabel}${cetakStatus !== "semua" ? ` — Status: ${statusLabel(cetakStatus)}` : ""} — Dicetak: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</h2>
 <table>
@@ -324,7 +328,7 @@ export default function PotonganPage({ activeTab = "potongan", highlightKey }: P
   @media print { body { padding: 0; } }
 </style></head><body>
 <h1>STRUK POTONGAN GAJI</h1>
-<h2>PRIMKOPPOL RESOR SUBANG</h2>
+<h2>${getOrgName()}</h2>
 <div class="divider"></div>
 <div class="row"><span class="label">Nama</span><span class="bold">${p.namaAnggota}</span></div>
 <div class="row"><span class="label">ID Anggota</span><span>${p.anggotaId}</span></div>
@@ -373,7 +377,7 @@ export default function PotonganPage({ activeTab = "potongan", highlightKey }: P
   .alasan { margin-top: 16px; padding: 8px 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
   @media print { body { padding: 0; } }
 </style></head><body>
-<p class="org">PRIMKOPPOL RESOR SUBANG</p>
+<p class="org">${getOrgName()}</p>
 <h1>KOREKSI POTONGAN</h1>
 <h2>${koreksiItem.namaAnggota} (${koreksiItem.anggotaId}) — Periode: ${periode} — Dicetak: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</h2>
 <p class="section">[ SIMPANAN ]</p>
@@ -399,6 +403,68 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
     } else {
       await navigator.clipboard.writeText(text);
       alert("Data koreksi sudah disalin ke clipboard!");
+    }
+  };
+
+  const handleUploadFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const lines = text.split(/\r?\n/).filter((l) => l.trim());
+        if (lines.length < 2) { setUploadError("File kosong atau hanya berisi header."); return; }
+        const rows: Potongan[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+          if (cols.length < 9) continue;
+          const [, nama, id, bulan, sw, angsuran, jasa, total, status] = cols;
+          rows.push({
+            id: `UPLOAD-${Date.now()}-${i}`,
+            anggotaId: id || "",
+            namaAnggota: nama || "",
+            bulan: bulan || "",
+            simpananWajib: Number(sw) || 0,
+            angsuranPinjaman: Number(angsuran) || 0,
+            jasaPinjaman: Number(jasa) || 0,
+            totalPotongan: Number(total) || 0,
+            status: (status?.toLowerCase() === "gagal" ? "gagal" : status?.toLowerCase() === "terkirim" ? "terkirim" : "proses") as "proses" | "terkirim" | "gagal",
+          });
+        }
+        if (rows.length === 0) { setUploadError("Tidak ada data valid ditemukan. Pastikan format CSV benar."); return; }
+        setUploadPreview(rows);
+      } catch { setUploadError("Gagal membaca file. Pastikan format CSV valid."); }
+    };
+    reader.readAsText(file);
+    if (uploadFileRef.current) uploadFileRef.current.value = "";
+  };
+
+  const handleUploadConfirm = async () => {
+    if (!uploadPreview) return;
+    setUploadBusy(true);
+    try {
+      for (const row of uploadPreview) {
+        await insertPotongan({
+          anggotaId: row.anggotaId,
+          namaAnggota: row.namaAnggota,
+          bulan: row.bulan,
+          simpananWajib: row.simpananWajib,
+          angsuranPinjaman: row.angsuranPinjaman,
+          jasaPinjaman: row.jasaPinjaman,
+          totalPotongan: row.totalPotongan,
+          status: row.status,
+        });
+      }
+      setPotonganList((prev) => [...uploadPreview, ...prev]);
+      toast("success", `${uploadPreview.length} data potongan berhasil diimport.`);
+      setUploadPreview(null);
+      setGagalUploadPopup(false);
+    } catch (err) {
+      setUploadError(`Gagal import: ${(err as Error).message}`);
+    } finally {
+      setUploadBusy(false);
     }
   };
 
@@ -428,7 +494,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
   .summary-box span { font-weight: 600; }
   @media print { body { padding: 0; } }
 </style></head><body>
-<p class="org">PRIMKOPPOL RESOR SUBANG</p>
+<p class="org">${getOrgName()}</p>
 <h1>LAPORAN POTONGAN GAJI ANGGOTA</h1>
 <h2>Periode: ${filterBulan ? dateToMonthLabel(filterBulan) : "Semua Periode"} — Status: ${filterStatus === "semua" ? "Semua" : statusLabel(filterStatus)} — Dicetak: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</h2>
 <table><thead><tr><th>No</th><th>Nama</th><th>ID</th><th>Bulan</th><th class="text-right">Simp. Wajib</th><th class="text-right">Angsuran</th><th class="text-right">Jasa</th><th class="text-right">Total</th><th>Status</th></tr></thead>
@@ -866,16 +932,27 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
   // TAB 5: RIWAYAT TRANSAKSI (Audit)
   // =============================================
   if (activeTab === "potongan_riwayat") {
-    const mockLogs = potonganList.slice(0, 30).map((p, i) => ({
-      id: `LOG${String(i + 1).padStart(4, "0")}`,
-      tanggal: new Date(Date.now() - i * 86400000).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }),
-      waktu: new Date(Date.now() - i * 86400000).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
-      aksi: i % 4 === 0 ? "Koreksi" : i % 3 === 0 ? "Hapus" : i % 2 === 0 ? "Update" : "Input",
-      anggota: p.namaAnggota,
-      keterangan: i % 4 === 0 ? `Koreksi simpanan wajib ${p.namaAnggota}` : i % 3 === 0 ? `Hapus data potongan ${p.namaAnggota}` : i % 2 === 0 ? `Update status menjadi ${statusLabel(p.status)}` : `Input potongan baru ${p.bulan}`,
-      operator: "Admin",
-      status: p.status === "gagal" ? "gagal" : "berhasil",
-    }));
+    const realLogs = potonganList.map((p) => {
+      const aksi = p.status === "terkirim" ? "Terkirim" : p.status === "gagal" ? "Gagal" : p.status === "proses" ? "Input" : "Input";
+      const ket = p.status === "terkirim"
+        ? `Potongan ${p.bulan} berhasil dikirim — Total ${formatRupiah(p.totalPotongan)}`
+        : p.status === "gagal"
+          ? `Potongan ${p.bulan} gagal diproses`
+          : `Potongan ${p.bulan} masuk proses — ${formatRupiah(p.totalPotongan)}`;
+      return {
+        id: p.id,
+        tanggal: new Date(p.bulan.replace(/(\w+)\s(\d+)/, (_, m, y) => {
+          const months: Record<string, string> = { Januari: "01", Februari: "02", Maret: "03", April: "04", Mei: "05", Juni: "06", Juli: "07", Agustus: "08", September: "09", Oktober: "10", November: "11", Desember: "12" };
+          return `${y}-${months[m] || "01"}-01`;
+        })).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }),
+        waktu: "—",
+        aksi,
+        anggota: p.namaAnggota,
+        keterangan: ket,
+        operator: "Admin",
+        status: p.status === "gagal" ? "gagal" : "berhasil" as "gagal" | "berhasil",
+      };
+    });
 
     return (
       <div className="space-y-6">
@@ -897,15 +974,15 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
                 </tr>
               </thead>
               <tbody>
-                {mockLogs.map((log) => (
+                {realLogs.map((log) => (
                   <tr key={log.id} className="border-b border-navy-800/50 hover:bg-navy-800/30 transition-colors">
                     <td className="px-4 py-3"><p className="text-sm text-white">{log.tanggal}</p><p className="text-xs text-navy-400">{log.waktu}</p></td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
                         log.aksi === "Input" ? "bg-accent-600/20 text-accent-400" :
-                        log.aksi === "Update" ? "bg-warning-600/20 text-warning-400" :
-                        log.aksi === "Koreksi" ? "bg-purple-600/20 text-purple-400" :
-                        "bg-danger-600/20 text-danger-400"
+                        log.aksi === "Terkirim" ? "bg-success-600/20 text-success-400" :
+                        log.aksi === "Gagal" ? "bg-danger-600/20 text-danger-400" :
+                        "bg-warning-600/20 text-warning-400"
                       }`}>{log.aksi}</span>
                     </td>
                     <td className="px-4 py-3 text-sm text-white">{log.anggota}</td>
@@ -1134,24 +1211,64 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
       )}
 
       {gagalUploadPopup && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setGagalUploadPopup(false)}>
-          <div className="bg-navy-900 border border-navy-700/50 rounded-2xl w-full max-w-lg p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => { setGagalUploadPopup(false); setUploadPreview(null); setUploadError(null); }}>
+          <div className="bg-navy-900 border border-navy-700/50 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-accent-500/20 flex items-center justify-center"><Upload className="w-5 h-5 text-accent-400" /></div>
-                <div><h3 className="text-lg font-bold text-white">Upload Data dari Excel</h3><p className="text-xs text-navy-400">Import data gagal potong dari file Excel</p></div>
+                <div><h3 className="text-lg font-bold text-white">Upload Data dari CSV</h3><p className="text-xs text-navy-400">Import data potongan dari file CSV</p></div>
               </div>
-              <button type="button" onClick={() => setGagalUploadPopup(false)} className="p-1.5 rounded-lg text-navy-400 hover:bg-navy-800 hover:text-white transition-colors cursor-pointer"><XCircle className="w-5 h-5" /></button>
+              <button type="button" onClick={() => { setGagalUploadPopup(false); setUploadPreview(null); setUploadError(null); }} className="p-1.5 rounded-lg text-navy-400 hover:bg-navy-800 hover:text-white transition-colors cursor-pointer"><XCircle className="w-5 h-5" /></button>
             </div>
-            <div className="bg-navy-800/50 border-2 border-dashed border-navy-600/50 rounded-xl p-8 text-center mb-4">
-              <Upload className="w-10 h-10 mx-auto mb-3 text-navy-400" />
-              <p className="text-sm text-navy-300 mb-2">Drag & drop file Excel atau</p>
-              <button type="button" className="bg-accent-500 hover:bg-accent-600 text-white px-5 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer">Pilih File</button>
-              <p className="text-xs text-navy-400 mt-3">Format: .xlsx, .xls — Kolom: No, Nama, ID Anggota, Bulan, Simp. Wajib, Angsuran, Jasa, Total, Status</p>
-            </div>
-            <div className="bg-navy-800/50 rounded-xl p-3">
-              <p className="text-xs text-navy-400"><span className="font-semibold text-navy-300">Format tabel:</span> Ikuti format cetakan Daftar Potongan. Kolom harus sesuai urutan: No, Nama Anggota, ID, Bulan, Simpanan Wajib, Angsuran Pinjaman, Jasa Pinjaman, Total, Status.</p>
-            </div>
+            {uploadError && (
+              <div className="flex items-center gap-2 bg-danger-600/15 border border-danger-600/30 rounded-xl px-4 py-3 text-sm text-danger-400 mb-4 shrink-0">
+                <AlertTriangle className="w-4 h-4 shrink-0" /> {uploadError}
+              </div>
+            )}
+            {!uploadPreview ? (
+              <>
+                <div
+                  className="bg-navy-800/50 border-2 border-dashed border-navy-600/50 rounded-xl p-8 text-center mb-4 cursor-pointer hover:border-accent-500/50 transition-colors"
+                  onClick={() => uploadFileRef.current?.click()}
+                >
+                  <Upload className="w-10 h-10 mx-auto mb-3 text-navy-400" />
+                  <p className="text-sm text-navy-300 mb-2">Klik untuk pilih file CSV</p>
+                  <p className="text-xs text-navy-400 mt-2">Format: .csv — Kolom: No, Nama, ID Anggota, Bulan, Simp. Wajib, Angsuran, Jasa, Total, Status</p>
+                  <input ref={uploadFileRef} type="file" accept=".csv" className="hidden" onChange={handleUploadFile} />
+                </div>
+                <div className="bg-navy-800/50 rounded-xl p-3">
+                  <p className="text-xs text-navy-400"><span className="font-semibold text-navy-300">Contoh format CSV:</span><br />No,Nama,ID,Bulan,SimpWajib,Angsuran,Jasa,Total,Status<br />1,BAMBANG ARAYANA,A001,April 2026,50000,333333,5000,388333,proses</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-white mb-2 shrink-0">{uploadPreview.length} data siap diimport:</p>
+                <div className="overflow-auto flex-1 mb-4 rounded-xl border border-navy-700/50">
+                  <table className="w-full text-xs">
+                    <thead className="bg-navy-800/80 sticky top-0"><tr className="border-b border-navy-600/40">
+                      <th className="px-2 py-2 text-left text-navy-300">Nama</th>
+                      <th className="px-2 py-2 text-left text-navy-300">ID</th>
+                      <th className="px-2 py-2 text-left text-navy-300">Bulan</th>
+                      <th className="px-2 py-2 text-right text-navy-300">Total</th>
+                    </tr></thead>
+                    <tbody>{uploadPreview.slice(0, 50).map((r, i) => (
+                      <tr key={i} className="border-b border-navy-800/50">
+                        <td className="px-2 py-1.5 text-white">{r.namaAnggota}</td>
+                        <td className="px-2 py-1.5 text-navy-300">{r.anggotaId}</td>
+                        <td className="px-2 py-1.5 text-navy-300">{r.bulan}</td>
+                        <td className="px-2 py-1.5 text-right text-white">{formatRupiah(r.totalPotongan)}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button type="button" onClick={() => { setUploadPreview(null); setUploadError(null); }} className="flex-1 bg-navy-700 hover:bg-navy-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">Batal</button>
+                  <button type="button" onClick={handleUploadConfirm} disabled={uploadBusy} className="flex-1 flex items-center justify-center gap-2 bg-accent-500 hover:bg-accent-600 text-white py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer disabled:opacity-50">
+                    {uploadBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Import {uploadPreview.length} Data
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1165,7 +1282,7 @@ ${koreksiAlasan ? `<div class="alasan"><strong>Alasan Koreksi:</strong> ${koreks
     return (
       <>
         <h3 className="text-base font-bold text-white text-center mb-1">RINCIAN POTONGAN GAJI</h3>
-        <p className="text-xs text-navy-400 text-center mb-4">PRIMKOPPOL RESOR SUBANG</p>
+        <p className="text-xs text-navy-400 text-center mb-4">{getOrgName()}</p>
         <div className="border-t border-navy-700/50 pt-3 space-y-2">
           <div className="flex justify-between"><span className="text-navy-400">Nama Anggota</span><span className="font-medium">{item.namaAnggota}</span></div>
           <div className="flex justify-between"><span className="text-navy-400">ID Anggota</span><span>{item.anggotaId}</span></div>

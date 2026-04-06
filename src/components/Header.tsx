@@ -5,6 +5,7 @@ import { Bell, Search, User, Calendar, Menu, LogOut, ChevronDown, Loader2, Check
 import type { UserSession } from "./LoginPage";
 import type { Anggota } from "@/data/mock";
 import { searchAnggota } from "@/lib/fetchers";
+import { supabase } from "@/lib/supabase";
 
 export interface NotifItem {
   id: string;
@@ -15,13 +16,85 @@ export interface NotifItem {
   highlightKey?: string;
 }
 
-const INITIAL_NOTIFS: NotifItem[] = [
-  { id: "n1", msg: "Pinjaman baru diajukan oleh BRIPKA AHMAD SURYANA", time: "5 menit lalu", unread: true, target: "pinjaman", highlightKey: "pinjaman-baru" },
-  { id: "n2", msg: "Setoran simpanan wajib berhasil diproses", time: "1 jam lalu", unread: true, target: "simpanan", highlightKey: "simpanan-setoran" },
-  { id: "n3", msg: "Potongan bulan Maret 2026 telah dikirim", time: "3 jam lalu", unread: true, target: "potongan", highlightKey: "potongan-terkirim" },
-  { id: "n4", msg: "Backup otomatis berhasil dilakukan", time: "1 hari lalu", unread: false, target: "pengaturan", highlightKey: "pengaturan-backup" },
-  { id: "n5", msg: "Anggota baru terdaftar: BRIPTU HENDRA", time: "2 hari lalu", unread: false, target: "anggota", highlightKey: "anggota-baru" },
-];
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Baru saja";
+  if (mins < 60) return `${mins} menit lalu`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} jam lalu`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days} hari lalu`;
+  return `${Math.floor(days / 30)} bulan lalu`;
+}
+
+async function buildNotifs(): Promise<NotifItem[]> {
+  const items: NotifItem[] = [];
+  try {
+    const { data: simpanan } = await supabase
+      .from("transaksi_simpanan")
+      .select("id, tanggal, nama_anggota, jenis, kategori, jumlah")
+      .order("tanggal", { ascending: false })
+      .limit(3);
+    if (simpanan) {
+      for (const s of simpanan) {
+        const label = s.jenis === "setoran" ? "Setoran" : "Pengambilan";
+        items.push({
+          id: `s-${s.id}`,
+          msg: `${label} simpanan ${s.kategori || ""} oleh ${s.nama_anggota}`,
+          time: timeAgo(s.tanggal),
+          unread: true,
+          target: "simpanan",
+          highlightKey: "simpanan-setoran",
+        });
+      }
+    }
+    const { data: pinjaman } = await supabase
+      .from("pinjaman")
+      .select("id, tanggal_pinjam, nama_anggota, jenis_pinjaman")
+      .order("tanggal_pinjam", { ascending: false })
+      .limit(3);
+    if (pinjaman) {
+      for (const p of pinjaman) {
+        items.push({
+          id: `p-${p.id}`,
+          msg: `Pinjaman ${p.jenis_pinjaman || ""} oleh ${p.nama_anggota}`,
+          time: timeAgo(p.tanggal_pinjam),
+          unread: true,
+          target: "pinjaman",
+          highlightKey: "pinjaman-baru",
+        });
+      }
+    }
+    const { data: anggota } = await supabase
+      .from("anggota")
+      .select("id, nama, bergabung")
+      .order("bergabung", { ascending: false })
+      .limit(2);
+    if (anggota) {
+      for (const a of anggota) {
+        items.push({
+          id: `a-${a.id}`,
+          msg: `Anggota terdaftar: ${a.nama}`,
+          time: timeAgo(a.bergabung),
+          unread: false,
+          target: "anggota",
+          highlightKey: "anggota-baru",
+        });
+      }
+    }
+  } catch {
+    items.push({ id: "err", msg: "Gagal memuat notifikasi", time: "—", unread: false });
+  }
+  if (items.length === 0) {
+    items.push({ id: "empty", msg: "Belum ada aktivitas terbaru", time: "—", unread: false });
+  }
+  items.sort((a, b) => {
+    if (a.unread !== b.unread) return a.unread ? -1 : 1;
+    return 0;
+  });
+  return items;
+}
 
 interface HeaderProps {
   title: string;
@@ -44,9 +117,17 @@ export default function Header({
 }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifs, setNotifs] = useState<NotifItem[]>(INITIAL_NOTIFS);
+  const [notifs, setNotifs] = useState<NotifItem[]>([]);
+  const [notifsLoading, setNotifsLoading] = useState(true);
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    buildNotifs().then((items) => {
+      setNotifs(items);
+      setNotifsLoading(false);
+    });
+  }, []);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");

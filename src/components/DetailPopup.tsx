@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { X, Printer, Share2, Download, Loader2, Check, Copy, MessageCircle, Mail, Image } from "lucide-react";
 import html2canvas from "html2canvas-pro";
+import { getOrgName, getOrgAddress } from "@/data/mock";
 
 interface DetailPopupProps {
   open: boolean;
@@ -107,7 +108,7 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
       .header{text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #333}
       .row{display:flex;gap:8px;margin-bottom:6px} .label{color:#666;min-width:140px;font-size:13px} .value{font-weight:500;font-size:13px}
     </style></head><body>`);
-    w.document.write(`<div class="header"><h2>PRIMKOPPOL RESOR SUBANG</h2><h3>Jl. Otista No.52, Subang</h3></div>`);
+    w.document.write(`<div class="header"><h2>${getOrgName()}</h2><h3>${getOrgAddress()}</h3></div>`);
     w.document.write(contentRef.current.innerHTML);
     w.document.write("</body></html>");
     w.document.close();
@@ -148,7 +149,7 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
         }
 
         try {
-          await navigator.share({ title, text: `${title} - PRIMKOPPOL Resor Subang` });
+          await navigator.share({ title, text: `${title} - ${getOrgName()}` });
           return;
         } catch (e) {
           if ((e as Error).name === "AbortError") return;
@@ -163,7 +164,7 @@ export default function DetailPopup({ open, onClose, title, filename = "detail",
     }
   };
 
-  const shareText = `${title} - PRIMKOPPOL Resor Subang`;
+  const shareText = `${title} - ${getOrgName()}`;
 
   const handleShareDownload = async () => {
     const blob = await getBlob();

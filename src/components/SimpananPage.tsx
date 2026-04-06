@@ -15,7 +15,7 @@ import {
   Filter,
 } from "lucide-react";
 import StatCard from "./StatCard";
-import { formatRupiah } from "@/data/mock";
+import { formatRupiah, getOrgName } from "@/data/mock";
 import type { Anggota, TransaksiSimpanan } from "@/data/mock";
 import {
   fetchAnggota,
@@ -384,7 +384,7 @@ export default function SimpananPage({ highlightKey }: { highlightKey?: string |
         {detailItem && (
           <>
             <h3 className="text-base font-bold text-white text-center mb-1">RINCIAN TRANSAKSI SIMPANAN</h3>
-            <p className="text-xs text-navy-400 text-center mb-4">PRIMKOPPOL RESOR SUBANG</p>
+            <p className="text-xs text-navy-400 text-center mb-4">{getOrgName()}</p>
 
             <div className="flex flex-wrap gap-2 mb-4">
               <div className="flex items-center gap-1.5">

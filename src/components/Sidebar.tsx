@@ -22,6 +22,7 @@ import {
   ListChecks,
   History,
 } from "lucide-react";
+import { getOrgName } from "@/data/mock";
 
 interface SubMenuItem {
   id: string;
@@ -115,12 +116,12 @@ export default function Sidebar({
           </div>
           <div className="overflow-hidden lg:hidden">
             <h1 className="text-base font-bold text-white leading-tight">Koperasi Pintar</h1>
-            <p className="text-[11px] text-navy-300 leading-tight">PRIMKOPPOL Subang</p>
+            <p className="text-[11px] text-navy-300 leading-tight">{getOrgName()}</p>
           </div>
           {!collapsed && (
             <div className="overflow-hidden hidden lg:block">
               <h1 className="text-base font-bold text-white leading-tight">Koperasi Pintar</h1>
-              <p className="text-[11px] text-navy-300 leading-tight">PRIMKOPPOL Subang</p>
+              <p className="text-[11px] text-navy-300 leading-tight">{getOrgName()}</p>
             </div>
           )}
           {/* Mobile close button */}
